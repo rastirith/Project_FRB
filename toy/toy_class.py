@@ -105,13 +105,13 @@ class main_application(tk.Frame):
        
         #Adds path name and moves img to appropriate folder
         if (choice == 1):
-            print(pics[pics_ind].split("\\")[9])
-            os.rename(pics[pics_ind],folder + "\\frb\\" + pics[pics_ind].split("\\")[9])
-            result_file.write(folder + "\\frb\\" + pics[pics_ind].split("\\")[9] + "\n")
+            print(pics[pics_ind].split("\\")[-1])
+            os.rename(pics[pics_ind],folder + "\\frb\\" + pics[pics_ind].split("\\")[-1])
+            result_file.write(folder + "\\frb\\" + pics[pics_ind].split("\\")[-1] + "\n")
         else:
-            print(pics[pics_ind].split("\\")[9])
-            os.rename(pics[pics_ind],folder + "\\no_frb\\" + pics[pics_ind].split("\\")[9])
-            result_file.write(folder + "\\no_frb\\" + pics[pics_ind].split("\\")[9] + "\n")
+            print(pics[pics_ind].split("\\")[-1])
+            os.rename(pics[pics_ind],folder + "\\no_frb\\" + pics[pics_ind].split("\\")[-1])
+            result_file.write(folder + "\\no_frb\\" + pics[pics_ind].split("\\")[-1] + "\n")
   
         #Moves to next img
         if ((pics_ind >= (len(pics) - 1)) and (len(pics) != 1)):
