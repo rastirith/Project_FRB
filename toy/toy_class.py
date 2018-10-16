@@ -4,7 +4,7 @@ import numpy as np
 from tkinter.filedialog import askdirectory
 from PIL import ImageTk as itk
 from PIL import Image
-   
+
 #*****MAIN CLASS*****#
 class main_application(tk.Frame):
 
