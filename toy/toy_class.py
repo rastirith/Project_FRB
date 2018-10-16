@@ -136,7 +136,13 @@ def main():
     
     idir_path = os.getcwd() + "\\idir"
     odir_path = os.getcwd() + "\\odir"
-
+    
+    try:    #Only creates folders if they don't already exist
+        os.mkdir(idir_path)
+        os.mkdir(odir_path)
+    except:
+        pass
+    
     completeName = os.path.join(odir_path,"results.txt")
     result_file=open(completeName,"a")
    
