@@ -133,9 +133,9 @@ def main():
     global app
     global idir_path
     global odir_path
-   
-    idir_path = "C:\\Users\\mumin\\OneDrive\\Desktop\\Python\\classbased\\classbased\\idir"
-    odir_path = "C:\\Users\\mumin\\OneDrive\\Desktop\\Python\\classbased\\classbased\\odir"
+    
+    idir_path = os.getcwd() + "\\idir"
+    odir_path = os.getcwd() + "\\odir"
 
     completeName = os.path.join(odir_path,"results.txt")
     result_file=open(completeName,"a")
