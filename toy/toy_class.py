@@ -7,17 +7,9 @@ import numpy as np
    
 #import matplotlib
 #import matplotlib.pyplot as plt
-matplotlib.use("TkAgg")
+#matplotlib.use("TkAgg")
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-
-
-
-
-
-
-
-
 
 
 
@@ -202,4 +194,4 @@ def main():
     result_file.close()
    
 if __name__ == '__main__':
-    main() 
+    main()
