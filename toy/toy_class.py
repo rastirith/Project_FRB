@@ -1,14 +1,22 @@
 import glob, os
 import tkinter as tk
 import numpy as np
-from tkinter.filedialog import askdirectory
-from PIL import ImageTk as itk
-from PIL import Image
+#from tkinter.filedialog import askdirectory
+#from PIL import ImageTk as itk
+#from PIL import Image
+   
+#import matplotlib
+#import matplotlib.pyplot as plt
+#matplotlib.use("TkAgg")
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+
+
 
 #*****MAIN CLASS*****#
 class main_application(tk.Frame):
 
-    def __init__(self, master=None, **kwargs):
+    def __init__(self, master):
         global pics
         global pics_ind
        
@@ -17,9 +25,9 @@ class main_application(tk.Frame):
         self.master = master
        
         self.master.title("FRB viewer")
-        self.grid(row=0,column=0,rowspan = 15, columnspan = 15)
+        self.grid(row=0,column=0)#,rowspan = 15, columnspan = 15)
         self.master.configure(background = 'black')
-        self.master.grid_rowconfigure(0, weight = 1)
+        self.master.grid_rowconfigure(0)
         self.master.grid_columnconfigure(0, weight = 1)
       
       
@@ -35,16 +43,12 @@ class main_application(tk.Frame):
         filemenu.add_command(label = "Exit", command = self.client_exit)
        
        
-        #IMAGE
-        self.pngimage = Image.open(pics[pics_ind])
-        width, height = self.pngimage.size
-        self.pngimage = self.pngimage.resize((width,height), Image.ANTIALIAS)
-        self.img = itk.PhotoImage(self.pngimage)
-        self.canvas = tk.Canvas(self,width = width, height = height)
-        self.img1 = self.canvas.create_image(0,0,image = self.img, anchor = "nw")
-        self.canvas.grid(row = 0, column = 0, columnspan = 10, rowspan = 10)
-       
-       
+        #PLOT
+        self.f = plotimg(pics[pics_ind])
+        self.canvas = FigureCanvasTkAgg(self.f, self)
+        self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 10, rowspan = 10)
+
+
         #BUTTONS
         self.frb_button = tk.Button(self,text = "FRB", command = lambda: self.frbchoice(odir_path,1))
         self.nfrb_button = tk.Button(self,text = "NO FRB", command = lambda: self.frbchoice(odir_path,0))
@@ -59,13 +63,6 @@ class main_application(tk.Frame):
         self.T.config(yscrollcommand = self.S.set)
         self.T.grid(row = 13,column = 9)
         self.S.grid(row = 13,column = 9,sticky = "E")
-      
-   
-    #Method to change the img on the canvas
-    def changeimg(self): 
-        self.pngimage = Image.open(pics[pics_ind])
-        self.img = itk.PhotoImage(self.pngimage)
-        self.canvas.itemconfig(self.img1, image = self.img)
        
     #Changing image with left or right key
     def key(self, event):
@@ -77,13 +74,17 @@ class main_application(tk.Frame):
                 print("Reached end of files.")
             else:
                 pics_ind += 1
-                self.changeimg()
+                self.f = plotimg(pics[pics_ind])
+                self.canvas = FigureCanvasTkAgg(self.f, self)
+                self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 10, rowspan = 10)
         elif event.keysym == 'Left':
             if (pics_ind <= 0):
                 print("At the first file already.")
             else:
                 pics_ind -= 1
-                self.changeimg()
+                self.f = plotimg(pics[pics_ind])
+                self.canvas = FigureCanvasTkAgg(self.f, self)
+                self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 10, rowspan = 10)
        
     #Exits client
     def client_exit(self):
@@ -103,11 +104,9 @@ class main_application(tk.Frame):
        
         #Adds path name and moves img to appropriate folder
         if (choice == 1):
-            print(pics[pics_ind].split("\\")[-1])
             os.rename(pics[pics_ind],folder + "\\frb\\" + pics[pics_ind].split("\\")[-1])
             result_file.write(folder + "\\frb\\" + pics[pics_ind].split("\\")[-1] + "\n")
         else:
-            print(pics[pics_ind].split("\\")[-1])
             os.rename(pics[pics_ind],folder + "\\no_frb\\" + pics[pics_ind].split("\\")[-1])
             result_file.write(folder + "\\no_frb\\" + pics[pics_ind].split("\\")[-1] + "\n")
   
@@ -115,16 +114,47 @@ class main_application(tk.Frame):
         if ((pics_ind >= (len(pics) - 1)) and (len(pics) != 1)):
             if (len(pics) != 0):
                 pics_ind -= 1 
-                self.changeimg()
+                self.f = plotimg(pics[pics_ind])
+                self.canvas = FigureCanvasTkAgg(self.f, self)
+                self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 10, rowspan = 10)
                 del pics[pics_ind + 1]
             print("Reached end of files.")
         elif (len(pics) == 1):
             self.canvas.delete("all")
         else:
             pics_ind += 1
-            self.changeimg()
+            self.f = plotimg(pics[pics_ind])
+            self.canvas = FigureCanvasTkAgg(self.f, self)
+            self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 10, rowspan = 10)
             del pics[pics_ind - 1]
             pics_ind -= 1 
+
+
+def plotimg(path):
+
+    Tfile = open(path,'r')
+    data = np.fromfile(Tfile,np.float32,-1)
+    
+    c = data.reshape((-1,4))
+    np.savetxt('txtfilename',c)
+            
+    Tfile.close()
+    
+    columns = np.hsplit(c,4) #dm=0, time=1, ston=2, width=3
+
+    dm = columns[0]
+    time = columns[1]
+    #ston = columns[2]
+    width = columns[3]
+    
+    fig = Figure()
+    ax = fig.add_subplot(111)
+    ax.set_xlabel("X axis")
+    ax.set_ylabel("Y axis")
+    ax.scatter(time, dm, s = (width**3)/3500)
+    
+    return fig
+
  
 def main():
     global pics_ind
@@ -133,7 +163,7 @@ def main():
     global app
     global idir_path
     global odir_path
-    
+
     idir_path = os.getcwd() + "\\idir"
     odir_path = os.getcwd() + "\\odir"
     
@@ -142,7 +172,7 @@ def main():
         os.mkdir(odir_path)
     except:
         pass
-    
+        
     completeName = os.path.join(odir_path,"results.txt")
     result_file=open(completeName,"a")
    
@@ -150,14 +180,15 @@ def main():
     pics_ind = 0    #Index for the img currently being viewed
    
     #Adds names of files ending with .gif in 'pics' list
-    for file in glob.glob(idir_path + "/" + "*.png"):
+    for file in glob.glob(idir_path + "/" + "*.dat"):
         pics.append(file)
-   
+
     root = tk.Tk()
+    #plotimg(root, pics[0]).get_tk_widget().grid()
     #root.geometry("500x500")
     app = main_application(root)
     root.bind('<Key>', lambda event: app.key(event))
-   
+
     root.mainloop()
    
     result_file.close()
