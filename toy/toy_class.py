@@ -1,5 +1,6 @@
 import glob, os
 import tkinter as tk
+import tkinter.ttk as ttk
 import numpy as np
 #import tkFont
 #from tkinter.filedialog import askdirectory
@@ -47,12 +48,16 @@ class main_application(tk.Frame):
     def labels(self):
         global xref
         global yref
-
+        global progress
+        
         self.canvasupdate(xref, yref)   #Shows the first plot of the data set as default at start-up
         tk.Label(self, text = "X:", font = "Helvetica 9 bold").grid(row = 5, column = 6)
         tk.Label(self, text = "Y:", font = "Helvetica 9 bold").grid(row = 6, column = 6)
         
-    
+        # Progress bar displaying fraction of classified files
+        progress = ttk.Progressbar(self, orient="horizontal",length=100,mode='determinate')
+        progress.grid(row = 19, column = 10)
+        
     # Method defining the textbox part of the GUI
     def textbox(self):
         
@@ -137,7 +142,15 @@ class main_application(tk.Frame):
             else:
                 pics_ind -= 1
                 self.canvasupdate(xref,yref)
-       
+     
+    # Updates the progress bar    
+    def bar(self):
+        global length
+        global progcount
+        global progress
+        
+        progress['value']=progcount*100/length
+
     #Exits client
     def client_exit(self):
         exit()   
@@ -149,7 +162,11 @@ class main_application(tk.Frame):
         global pics
         global xref
         global yref
-       
+        global progcount
+        
+        progcount += 1
+        self.bar()
+        
         try:    #Only creates folders if they don't already exist
             os.mkdir(folder + "//frb")
             os.mkdir(folder + "//no_frb")
@@ -216,7 +233,9 @@ def main():
     global odir_path
     global xref
     global yref
-
+    global progcount
+    global length
+    
     # Input directories as defined in relation to the work. dir.
     idir_path = os.getcwd() + "\\idir"
     odir_path = os.getcwd() + "\\odir"
@@ -236,7 +255,10 @@ def main():
     #Adds names of files ending with .gif in 'pics' list
     for file in glob.glob(idir_path + "/" + "*.dat"):
         pics.append(file)
-
+    
+    length = len(pics)
+    progcount = 0
+    
     root = tk.Tk()
     
     app = main_application(root)
