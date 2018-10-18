@@ -5,7 +5,6 @@ import numpy as np
 #from tkinter.filedialog import askdirectory
 #from PIL import ImageTk as itk
 #from PIL import Image
-
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
@@ -248,4 +247,4 @@ def main():
     result_file.close()
    
 if __name__ == '__main__':
-    main() 
+    main()
