@@ -9,6 +9,7 @@ import threading
 #from PIL import Image
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+import matplotlib.pyplot as plt
 
 fontx = ('Helvetica', 8)
 
@@ -24,7 +25,7 @@ class start_app(tk.Tk):
         container.grid()
 
         self.frames = {}
-        for F in (main_frame, frame1):
+        for F in (main_frame, frame1, preview_frame):
             page_name = F.__name__
             frame = F(master=container, controller=self)
             self.frames[page_name] = frame
@@ -37,28 +38,31 @@ class start_app(tk.Tk):
         frame = self.frames[page_name]
         frame.tkraise()
         frame.focus_set()
+        
+        menubar = frame.menuobj()
+        self.configure(menu=menubar)
      
      
         
 class main_frame(tk.Frame):
     
     def __init__(self, master, controller):
-        global pics
-        global pics_ind
+        global source_paths
+        global source_ind
        
         #MASTER FRAME THINGS HERE
         tk.Frame.__init__(self, master)
         self.controller = controller            
         self.controller.title("FRB viewer")
-        self.grid(row=0,column=0, columnspan = 20, rowspan = 30)
+        self.grid(row=0,column=0)
         self.controller.configure(background = 'white')
         self.controller.bind('<Key>', lambda event: self.key1(event))
         
+        self.buttons()
         self.menuobj()
         self.labels()
         self.textbox()
-        self.buttons()
-    
+            
     # Method defining the drop down menu part of the GUI
     def menuobj(self):
         
@@ -71,21 +75,24 @@ class main_frame(tk.Frame):
         filemenu.add_command(label = "Choose output directory...",command = self.client_exit)
         filemenu.add_separator()
         filemenu.add_command(label = "Exit", command = self.client_exit)
-        self.buttons()
+        
+        editmenu = tk.Menu(menu)
+        editmenu.add_command(label = "Choose output directory...",command = self.client_exit)
+        menu.add_cascade(label = "bullshit", menu = editmenu)
         
     # Method defining the Labels (including the canvas) part of the GUI
     def labels(self):
         global xref
         global yref
         global progress
-        
+
         self.canvasupdate(xref, yref)   #Shows the first plot of the data set as default at start-up
-        tk.Label(self, text = "X:", font = "Helvetica 9 bold").grid(row = 5, column = 21)
-        tk.Label(self, text = "Y:", font = "Helvetica 9 bold").grid(row = 6, column = 21)
+        tk.Label(self, text = "X:", font = "Helvetica 9 bold").grid(row = 11, column = 54)
+        tk.Label(self, text = "Y:", font = "Helvetica 9 bold").grid(row = 12, column = 54)
         
         # Progress bar displaying fraction of classified files
         progress = ttk.Progressbar(self, orient="horizontal",length=100,mode='determinate')
-        progress.grid(row = 21, column = 18)
+        progress.grid(row = 51, column = 40, sticky = "nw", columnspan = 10, rowspan = 2, pady = (5,0))
         
     # Method defining the textbox part of the GUI
     def textbox(self):
@@ -94,7 +101,7 @@ class main_frame(tk.Frame):
         self.S = tk.Scrollbar(self)
         self.S.config(command = self.T.yview)
         self.T.config(yscrollcommand = self.S.set)
-        self.T.grid(row = 0,column = 22, rowspan = 5, columnspan = 4, sticky = "w", padx = (0, 15))
+        self.T.grid(row = 1,column = 56, rowspan = 10, columnspan = 40, sticky = "nw", padx = (0, 15))
         #self.S.grid(row = 0,column = 9, rowspan = 5, sticky = "E")
     
     # Method defining the buttons available on the GUI
@@ -130,7 +137,7 @@ class main_frame(tk.Frame):
                           variable=x, 
                           value=val,
                           command = rdbchange,
-                          font = fontx).grid(row = 5, column = 22 + val)
+                          font = fontx).grid(row = 11, column = 56 + val)
         
         # Radiobutton allowing the user to choose what data to display on the y-axis of the plot
         for val, datatypes2 in enumerate(datatypes2):
@@ -140,73 +147,80 @@ class main_frame(tk.Frame):
                           variable=y, 
                           value=val,
                           command = rdbchange,
-                          font = fontx).grid(row = 6, column = 22 + val)
+                          font = fontx).grid(row = 12, column = 56 + val)
         
         # Button to display the plot defined by user's choice of x- and y-values
         self.show_button = tk.Button(self, text = "Show", command = lambda: self.canvasupdate(xref, yref))
-        self.show_button.grid(row = 7, column = 23, columnspan = 2, padx = 15)
+        self.show_button.grid(row = 13, column = 55, columnspan = 5, rowspan = 4)
+        
+        # Button to view the previously classified plots
+        self.prev_button = tk.Button(self, text = "View plot previews", command = lambda: self.controller.show_frame("preview_frame"))
+        self.prev_button.config(height = 1, width = 20)
+        self.prev_button.grid(row = 51, column = 59, columnspan = 10, padx = (10,5), pady = (5,5))
         
         # Button to view the previously classified plots
         self.view_button = tk.Button(self, text = "View classified plots", command = lambda: self.controller.show_frame("frame1"))
         self.view_button.config(height = 1, width = 20)
-        self.view_button.grid(row = 21, column = 0, padx = (10,0))
+        self.view_button.grid(row = 51, column = 1, columnspan = 10, padx = (10,0), pady = (5,5))
         
         # Buttons to classify whether plot shows an FRB or not.
         self.frb_button = tk.Button(self,text = "Frb", command = lambda: self.frbchoice(odir_path,1))
         self.nfrb_button = tk.Button(self,text = "No frb", command = lambda: self.frbchoice(odir_path,0))
-        self.frb_button.grid(row = 1, column = 21, padx = 15)
-        self.nfrb_button.grid(row = 2, column = 21, padx = 15)
+        self.frb_button.config(height = 2, width = 6)
+        self.nfrb_button.config(height = 2, width = 6)
+        self.frb_button.grid(row = 2, column = 51, rowspan = 3, columnspan = 5, padx = 15)
+        self.nfrb_button.grid(row = 6, column = 51, rowspan = 3, columnspan = 5, padx = 15)
         
         # Buttons to move between plots
         self.right_btn = tk.Button(self, text = "Next plot", command = lambda: self.Right())
         self.left_btn = tk.Button(self, text = "Prev. plot", command = lambda: self.Left())
-        self.right_btn.grid(row = 21, column = 8, pady = 5)
-        self.left_btn.grid(row = 21, column = 7, pady = 5)
+        self.right_btn.grid(row = 50, column = 24, columnspan = 6, rowspan = 3, sticky = "nw", pady = (5,5))
+        self.left_btn.grid(row = 50, column = 17, columnspan = 6, rowspan = 3, sticky = "nw", pady = (5,5))
         
     def Right(self):
-        global pics_ind
-        global pics
+        global source_ind
+        global source_paths
         global xref
         global yref
         
-        if (pics_ind >= (len(pics) - 1)):  # If at the end of the array don't try to go further
+        if (source_ind >= (len(source_paths) - 1)):  # If at the end of the array don't try to go further
             print("Reached end of files.")
         else:
-            pics_ind += 1
+            source_ind += 1
             self.canvasupdate(xref,yref)
             
     def Left(self):
-        global pics_ind
-        global pics
+        global source_ind
+        global source_paths
         global xref
         global yref
         
-        if (pics_ind <= 0):   # If at the beginning on the array don't try to go further back
+        if (source_ind <= 0):   # If at the beginning on the array don't try to go further back
             print("At the first file already.")
         else:
-            pics_ind -= 1
+            source_ind -= 1
             self.canvasupdate(xref,yref)
         
     #Changing image with left or right key
     def key1(self, event):
-        global pics_ind
-        global pics
+        global source_ind
+        global source_paths
         global xref
         global yref
         
         print("besh")
         
         if event.keysym == 'Right':
-            if (pics_ind >= (len(pics) - 1)):       # If at the end of the array don't try to go further
+            if (source_ind >= (len(source_paths) - 1)):       # If at the end of the array don't try to go further
                 print("Reached end of files.")
             else:
-                pics_ind += 1
+                source_ind += 1
                 self.canvasupdate(xref,yref)
         elif event.keysym == 'Left':
-            if (pics_ind <= 0):                     # If at the beginning on the array don't try to go further back
+            if (source_ind <= 0):                     # If at the beginning on the array don't try to go further back
                 print("At the first file already.")
             else:
-                pics_ind -= 1
+                source_ind -= 1
                 self.canvasupdate(xref,yref)
      
     # Updates the progress bar    
@@ -224,8 +238,8 @@ class main_frame(tk.Frame):
     #Method to put image in appropriate folder, make a note where that is, and change the image on display
     def frbchoice(self, folder, choice):
         global result_file
-        global pics_ind
-        global pics
+        global source_ind
+        global source_paths
         global xref
         global yref
         global progcount
@@ -241,52 +255,55 @@ class main_frame(tk.Frame):
        
         #Adds path name and moves img to appropriate folder
         if (choice == 1):
-            os.rename(pics[pics_ind],folder + "\\frb\\" + pics[pics_ind].split("\\")[-1])
-            result_file.write(folder + "\\frb\\" + pics[pics_ind].split("\\")[-1] + "\n")
+            os.rename(source_paths[source_ind],folder + "\\frb\\" + source_paths[source_ind].split("\\")[-1])
+            result_file.write(folder + "\\frb\\" + source_paths[source_ind].split("\\")[-1] + "\n")
         else:
-            os.rename(pics[pics_ind],folder + "\\no_frb\\" + pics[pics_ind].split("\\")[-1])
-            result_file.write(folder + "\\no_frb\\" + pics[pics_ind].split("\\")[-1] + "\n")
+            os.rename(source_paths[source_ind],folder + "\\no_frb\\" + source_paths[source_ind].split("\\")[-1])
+            result_file.write(folder + "\\no_frb\\" + source_paths[source_ind].split("\\")[-1] + "\n")
   
         #Moves to next img
-        if ((pics_ind >= (len(pics) - 1)) and (len(pics) != 1)):
-            if (len(pics) != 0):
-                pics_ind -= 1 
+        if ((source_ind >= (len(source_paths) - 1)) and (len(source_paths) != 1)):
+            if (len(source_paths) != 0):
+                source_ind -= 1 
                 self.canvasupdate(xref,yref)
-                del pics[pics_ind + 1]
+                del source_paths[source_ind + 1]
             print("Reached end of files.")
-        elif (len(pics) == 1):
+        elif (len(source_paths) == 1):
             self.canvas.delete("all")
         else:
-            pics_ind += 1
+            source_ind += 1
             self.canvasupdate(xref,yref)
-            del pics[pics_ind - 1]
-            pics_ind -= 1 
+            del source_paths[source_ind - 1]
+            source_ind -= 1 
             
     def canvasupdate(self, xref, yref):
-        self.canvas = FigureCanvasTkAgg(plotimg(pics[pics_ind],xref,yref), self)
-        self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 20, rowspan = 20)
+        self.canvas = FigureCanvasTkAgg(plotimg(source_paths[source_ind],xref,yref), self)
+        self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
 
 
 class frame1(tk.Frame):
     
     def __init__(self, master, controller):
-        global pics
-        #global pics_ind
-        global pics_ind2
+        global source_paths
+        global review_ind
        
         #MASTER FRAME THINGS HERE
         tk.Frame.__init__(self, master)
         self.controller = controller            
         self.controller.title("FRB viewer")
-        self.grid(row=0,column=0, columnspan = 20, rowspan = 30)
+        self.grid(row=0,column=0)
         self.controller.configure(background = 'black')
         
+        rows = 0
+        while rows < 100:
+            self.controller.rowconfigure(rows, weight=1)
+            self.controller.columnconfigure(rows,weight=1)
+            rows += 1
+        
+        self.buttons()
         self.menuobj()
         self.labels()
         self.textbox()
-        self.buttons()
-        
-        self.controller.bind('<Key>', lambda event: self.key(event))
     
     # Method defining the drop down menu part of the GUI
     def menuobj(self):
@@ -300,7 +317,10 @@ class frame1(tk.Frame):
         filemenu.add_command(label = "Choose output directory...",command = self.client_exit)
         filemenu.add_separator()
         filemenu.add_command(label = "Exit", command = self.client_exit)
-        self.buttons()
+        
+        editmenu = tk.Menu(menu)
+        editmenu.add_command(label = "Choose output directory...",command = self.client_exit)
+        menu.add_cascade(label = "View", menu = editmenu)
         
     # Method defining the Labels (including the canvas) part of the GUI
     def labels(self):
@@ -308,13 +328,10 @@ class frame1(tk.Frame):
         global yref2
         global progress
         
-        self.canvasupdate(xref2, yref2)   #Shows the first plot of the data set as default at start-up
-        tk.Label(self, text = "X:", font = "Helvetica 9 bold").grid(row = 5, column = 21)
-        tk.Label(self, text = "Y:", font = "Helvetica 9 bold").grid(row = 6, column = 21)
-        
-        # Progress bar displaying fraction of classified files
-        progress = ttk.Progressbar(self, orient="horizontal",length=100,mode='determinate')
-        progress.grid(row = 21, column = 18)
+        #self.canvasupdate(xref2, yref2)   #Shows the first plot of the data set as default at start-up
+        self.emptycanvas()
+        tk.Label(self, text = "X:", font = "Helvetica 9 bold").grid(row = 11, column = 54)
+        tk.Label(self, text = "Y:", font = "Helvetica 9 bold").grid(row = 12, column = 54)
         
     # Method defining the textbox part of the GUI
     def textbox(self):
@@ -323,7 +340,7 @@ class frame1(tk.Frame):
         self.S = tk.Scrollbar(self)
         self.S.config(command = self.T.yview)
         self.T.config(yscrollcommand = self.S.set)
-        self.T.grid(row = 0,column = 22, rowspan = 5, columnspan = 4, sticky = "w", padx = (0, 15))
+        self.T.grid(row = 1,column = 56, rowspan = 10, columnspan = 40, sticky = "nw", padx = (0, 15))
         #self.S.grid(row = 0,column = 9, rowspan = 5, sticky = "E")
     
     # Method defining the buttons available on the GUI
@@ -359,7 +376,7 @@ class frame1(tk.Frame):
                           variable=x, 
                           value=val,
                           command = rdbchange,
-                          font = fontx).grid(row = 5, column = 22 + val)
+                          font = fontx).grid(row = 11, column = 56 + val)
         
         # Radiobutton allowing the user to choose what data to display on the y-axis of the plot
         for val, datatypes2 in enumerate(datatypes2):
@@ -369,112 +386,355 @@ class frame1(tk.Frame):
                           variable=y, 
                           value=val,
                           command = rdbchange,
-                          font = fontx).grid(row = 6, column = 22 + val)
+                          font = fontx).grid(row = 12, column = 56 + val)
         
         # Button to display the plot defined by user's choice of x- and y-values
         self.show_button = tk.Button(self, text = "Show", command = lambda: self.canvasupdate(xref2, yref2))
-        self.show_button.grid(row = 7, column = 23, columnspan = 2, padx = 15)
+        self.show_button.grid(row = 13, column = 55, columnspan = 5, rowspan = 4)
         
         # Button to view the previously classified plots
         self.view_button = tk.Button(self, text = "fdsfdsfds", command = lambda: self.controller.show_frame("main_frame"))
         self.view_button.config(height = 1, width = 20)
-        self.view_button.grid(row = 21, column = 0, padx = (10,0))
+        self.view_button.grid(row = 51, column = 1, columnspan = 10, padx = (10,0), pady = (5,5))
         
         # Buttons to classify whether plot shows an FRB or not.
-        self.frb_button = tk.Button(self,text = "Frb", command = lambda: self.frbchoice(odir_path,1))
-        self.nfrb_button = tk.Button(self,text = "No frb", command = lambda: self.frbchoice(odir_path,0))
-        self.frb_button.grid(row = 1, column = 21, padx = 15)
-        self.nfrb_button.grid(row = 2, column = 21, padx = 15)
+        self.frb_button = tk.Button(self,text = "Frb", command = lambda: self.display_choice(1))
+        self.nfrb_button = tk.Button(self,text = "No frb", command = lambda: self.display_choice(0))
+        self.frb_button.config(height = 2, width = 6)
+        self.nfrb_button.config(height = 2, width = 6)
+        self.frb_button.grid(row = 2, column = 51, rowspan = 3, columnspan = 5, padx = 15)
+        self.nfrb_button.grid(row = 6, column = 51, rowspan = 3, columnspan = 5, padx = 15)
         
         # Buttons to move between plots
         self.right_btn = tk.Button(self, text = "Next plot", command = lambda: self.Right())
         self.left_btn = tk.Button(self, text = "Prev. plot", command = lambda: self.Left())
-        self.right_btn.grid(row = 21, column = 8, pady = 5)
-        self.left_btn.grid(row = 21, column = 7, pady = 5)
+        self.right_btn.grid(row = 50, column = 24, columnspan = 6, rowspan = 3, sticky = "nw", pady = (5,5))
+        self.left_btn.grid(row = 50, column = 17, columnspan = 6, rowspan = 3, sticky = "nw", pady = (5,5))
 
         
     def Right(self):
-        global pics_ind2
-        global pics
+        global review_ind
+        global current_choice
         global xref2
         global yref2
         
-        if (pics_ind2 >= (len(pics) - 1)):  # If at the end of the array don't try to go further
+        if (review_ind >= (len(current_choice) - 1)):  # If at the end of the array don't try to go further
             print("Reached end of files.")
         else:
-            pics_ind2 += 1
-            self.canvasupdate(xref2,yref2)
+            review_ind += 1
+            self.canvasupdate(current_choice,xref2,yref2)
             
     def Left(self):
-        global pics_ind2
-        global pics
+        global review_ind
+        global current_choice
         global xref2
         global yref2
         
-        if (pics_ind2 <= 0):   # If at the beginning on the array don't try to go further back
+        if (review_ind <= 0):   # If at the beginning on the array don't try to go further back
             print("At the first file already.")
         else:
-            pics_ind2 -= 1
-            self.canvasupdate(xref2,yref2)
-     
-    # Updates the progress bar    
-    def bar(self):
-        global length
-        global progcount
-        global progress
-        
-        progress['value']=progcount*100/length
+            review_ind -= 1
+            self.canvasupdate(current_choice,xref2,yref2)
 
     #Exits client
     def client_exit(self):
         exit()   
       
     #Method to put image in appropriate folder, make a note where that is, and change the image on display
-    def frbchoice(self, folder, choice):
-        global result_file
-        global pics_ind2
-        global pics
+    def display_choice(self, choice):
+        global current_choice
         global xref2
         global yref2
-        global progcount
+        global review_ind
+        global frb_paths
+        global nfrb_paths
         
-        progcount += 1
-        self.bar()
+        review_ind = 0
+        #current_choice = folder
         
-        try:    #Only creates folders if they don't already exist
-            os.mkdir(folder + "//frb")
-            os.mkdir(folder + "//no_frb")
-        except:
-            pass
-       
-        #Adds path name and moves img to appropriate folder
         if (choice == 1):
-            os.rename(pics[pics_ind2],folder + "\\frb\\" + pics[pics_ind2].split("\\")[-1])
-            result_file.write(folder + "\\frb\\" + pics[pics_ind2].split("\\")[-1] + "\n")
+            self.frb_button.config(relief="sunken")
+            self.nfrb_button.config(relief="raised")
+            current_choice = frb_paths
+            self.canvasupdate(current_choice,xref2,yref2)
         else:
-            os.rename(pics[pics_ind2],folder + "\\no_frb\\" + pics[pics_ind2].split("\\")[-1])
-            result_file.write(folder + "\\no_frb\\" + pics[pics_ind2].split("\\")[-1] + "\n")
-  
-        #Moves to next img
-        if ((pics_ind >= (len(pics) - 1)) and (len(pics) != 1)):
-            if (len(pics) != 0):
-                pics_ind2 -= 1 
-                self.canvasupdate(xref2,yref2)
-                del pics[pics_ind2 + 1]
-            print("Reached end of files.")
-        elif (len(pics) == 1):
-            self.canvas.delete("all")
-        else:
-            pics_ind2 += 1
-            self.canvasupdate(xref2,yref2)
-            del pics[pics_ind2 - 1]
-            pics_ind2 -= 1 
-            
-    def canvasupdate(self, xref2, yref2):
-        global pics_ind2
-        self.canvas = FigureCanvasTkAgg(plotimg(pics[pics_ind2],xref2,yref2), self)
-        self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 20, rowspan = 20)
+            self.nfrb_button.config(relief="sunken")
+            self.frb_button.config(relief="raised")
+            current_choice = nfrb_paths
+            self.canvasupdate(current_choice,xref2,yref2)
+        
+    def canvasupdate(self, folder, xref2, yref2):
+        global review_ind
+        self.canvas = FigureCanvasTkAgg(plotimg(folder[review_ind],xref2,yref2), self)
+        self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+        
+    def emptycanvas(self):
+    
+        fig = Figure()
+        ax = fig.add_subplot(111)
+        ax.set_xlabel("Empty")
+        ax.set_ylabel("Empty")
+        ax.set_xlim(left = 0) #Sets lower x-limit to zero
+        self.canvas = FigureCanvasTkAgg(fig, self)
+        self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+    
+ 
 
+
+#Frame to display thumbnail images of plots for the user to choose from
+class preview_frame(tk.Frame):
+    
+    def __init__(self, master, controller):
+        global source_paths
+        global review_ind
+       
+        #MASTER FRAME THINGS HERE
+        tk.Frame.__init__(self, master)
+        self.controller = controller            
+        self.controller.title("FRB viewer")
+        self.grid(row=0,column=0)
+        self.controller.configure(background = 'black')
+        
+        rows = 0
+        while rows < 100:
+            self.controller.rowconfigure(rows, weight=1)
+            self.controller.columnconfigure(rows,weight=1)
+            rows += 1
+        
+        self.buttons()
+        self.menuobj()
+        self.labels()
+        self.textbox()
+    
+    # Method defining the drop down menu part of the GUI
+    def menuobj(self):
+        
+        menu = tk.Menu(self.controller)
+        self.controller.config(menu=menu)
+
+        filemenu = tk.Menu(menu)
+        menu.add_cascade(label = "File", menu = filemenu)
+        filemenu.add_command(label = "Choose input directory...",command = self.client_exit)
+        filemenu.add_command(label = "Choose output directory...",command = self.client_exit)
+        filemenu.add_separator()
+        filemenu.add_command(label = "Exit", command = self.client_exit)
+        
+        editmenu = tk.Menu(menu)
+        editmenu.add_command(label = "Choose output directory...",command = self.client_exit)
+        menu.add_cascade(label = "Viewfff", menu = editmenu)
+        
+    # Method defining the Labels (including the canvas) part of the GUI
+    def labels(self):
+        global xref2
+        global yref2
+        global progress
+        
+        #self.canvasupdate(xref2, yref2)   #Shows the first plot of the data set as default at start-up
+        self.emptycanvas()
+        tk.Label(self, text = "X:", font = "Helvetica 9 bold").grid(row = 11, column = 54)
+        tk.Label(self, text = "Y:", font = "Helvetica 9 bold").grid(row = 12, column = 54)
+        
+    # Method defining the textbox part of the GUI
+    def textbox(self):
+        
+        self.T = tk.Text(self,height = 6,width = 35)
+        self.S = tk.Scrollbar(self)
+        self.S.config(command = self.T.yview)
+        self.T.config(yscrollcommand = self.S.set)
+        self.T.grid(row = 1,column = 56, rowspan = 10, columnspan = 40, sticky = "nw", padx = (0, 15))
+        #self.S.grid(row = 0,column = 9, rowspan = 5, sticky = "E")
+    
+    # Method defining the buttons available on the GUI
+    def buttons(self):
+        global xref2
+        global yref2
+        
+        x = tk.IntVar() # Variable value for the x-axis data set given by Radiobutton
+        x.set(1)        # Sets the default plot to show time on the x-axis
+        xref2 = x.get()
+        
+        y = tk.IntVar() # Variable value for the x-axis data set given by Radiobutton
+        y.set(0)        # Sets the default plot to show DM on the y-axis
+        yref2 = y.get()
+
+        datatypes1 = [ "DM", "Time", "StoN", "Width"]
+        datatypes2 = [ "DM", "Time", "StoN", "Width"]
+        
+        # Method called by the Radiobuttons to check and update the xref and yref values if they have changed
+        def rdbchange():
+            global xref2
+            global yref2
+            
+            if ((y.get() != yref2) or (x.get() != xref2)):
+                xref2 = x.get()
+                yref2 = y.get()
+        
+        # Radiobutton allowing the user to choose what data to display on the x-axis of the plot
+        for val, datatypes1 in enumerate(datatypes1):
+            tk.Radiobutton(self, 
+                          text=datatypes1,
+                          padx = 7, 
+                          variable=x, 
+                          value=val,
+                          command = rdbchange,
+                          font = fontx).grid(row = 11, column = 56 + val)
+        
+        # Radiobutton allowing the user to choose what data to display on the y-axis of the plot
+        for val, datatypes2 in enumerate(datatypes2):
+            tk.Radiobutton(self, 
+                          text=datatypes2,
+                          padx = 7, 
+                          variable=y, 
+                          value=val,
+                          command = rdbchange,
+                          font = fontx).grid(row = 12, column = 56 + val)
+        
+        # Button to display the plot defined by user's choice of x- and y-values
+        self.show_button = tk.Button(self, text = "Show", command = lambda: self.canvasupdate(xref2, yref2))
+        self.show_button.grid(row = 13, column = 55, columnspan = 5, rowspan = 4)
+        
+        # Button to view the previously classified plots
+        self.view_button = tk.Button(self, text = "fdsfdsfds", command = lambda: self.controller.show_frame("main_frame"))
+        self.view_button.config(height = 1, width = 20)
+        self.view_button.grid(row = 51, column = 1, columnspan = 10, padx = (10,0), pady = (5,5))
+        """
+        # Buttons to classify whether plot shows an FRB or not.
+        self.frb_button = tk.Button(self,text = "Frb", command = lambda: self.display_choice(1))
+        self.nfrb_button = tk.Button(self,text = "No frb", command = lambda: self.display_choice(0))
+        self.frb_button.config(height = 2, width = 6)
+        self.nfrb_button.config(height = 2, width = 6)
+        self.frb_button.grid(row = 2, column = 51, rowspan = 3, columnspan = 5, padx = 15)
+        self.nfrb_button.grid(row = 6, column = 51, rowspan = 3, columnspan = 5, padx = 15)"""
+        
+        # Buttons to move between plots
+        self.right_btn = tk.Button(self, text = "Next plot", command = lambda: self.Right())
+        self.left_btn = tk.Button(self, text = "Prev. plot", command = lambda: self.Left())
+        self.right_btn.grid(row = 50, column = 24, columnspan = 6, rowspan = 3, sticky = "nw", pady = (5,5))
+        self.left_btn.grid(row = 50, column = 17, columnspan = 6, rowspan = 3, sticky = "nw", pady = (5,5))
+
+        
+    def Right(self):
+        global review_ind
+        global current_choice
+        global xref2
+        global yref2
+        
+        if (review_ind >= (len(current_choice) - 1)):  # If at the end of the array don't try to go further
+            print("Reached end of files.")
+        else:
+            review_ind += 1
+            self.canvasupdate(current_choice,xref2,yref2)
+            
+    def Left(self):
+        global review_ind
+        global current_choice
+        global xref2
+        global yref2
+        
+        if (review_ind <= 0):   # If at the beginning on the array don't try to go further back
+            print("At the first file already.")
+        else:
+            review_ind -= 1
+            self.canvasupdate(current_choice,xref2,yref2)
+
+    #Exits client
+    def client_exit(self):
+        exit()   
+    """
+    #Method to put image in appropriate folder, make a note where that is, and change the image on display
+    def display_choice(self, choice):
+        global current_choice
+        global xref2
+        global yref2
+        global review_ind
+        global frb_paths
+        global nfrb_paths
+        
+        review_ind = 0
+        
+        if (choice == 1):
+            self.frb_button.config(relief="sunken")
+            self.nfrb_button.config(relief="raised")
+            current_choice = frb_paths
+            self.canvasupdate(current_choice,xref2,yref2)
+        else:
+            self.nfrb_button.config(relief="sunken")
+            self.frb_button.config(relief="raised")
+            current_choice = nfrb_paths
+            self.canvasupdate(current_choice,xref2,yref2)"""
+
+    def canvasupdate(self, folder, xref2, yref2):
+        global review_ind
+        self.canvas = FigureCanvasTkAgg(plotimg(folder[review_ind],xref2,yref2), self)
+        self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+     
+    def canvas2(self, folder, xref2, yref2):
+        global review_ind
+        self.canvas = FigureCanvasTkAgg(plotimg(folder[review_ind],xref2,yref2), self, width = 200)
+        self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+        
+    def prev_plots(self):
+        fig = Figure()
+        ax = fig.add_subplot(111)
+        ax.set_xlabel("Empty")
+        ax.set_ylabel("Empty")
+        ax.set_xlim(left = 0) #Sets lower x-limit to zero
+        self.canvas = FigureCanvasTkAgg(fig, self)
+        self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+    
+    def emptycanvas(self):
+        
+        fig = Figure()
+        ax1 = fig.add_subplot(221)
+        ax2 = fig.add_subplot(222)
+        ax3 = fig.add_subplot(223)
+        ax4 = fig.add_subplot(224)
+        fig.tight_layout()
+        ax1.set_xlabel("Empty")
+        ax1.set_ylabel("Empty")
+        ax2.set_xlabel("Empty")
+        ax2.set_ylabel("Empty")
+        ax3.set_xlabel("Empty")
+        ax3.set_ylabel("Empty")
+        ax4.set_xlabel("Empty")
+        ax4.set_ylabel("Empty")
+        ax1.set_xlim(left = 0) #Sets lower x-limit to zero
+        
+        self.canvas1 = FigureCanvasTkAgg(fig, self)
+        #self.canvas1.get_tk_widget().config(width = 200, height = 200)
+        self.canvas1.get_tk_widget().grid(row = 0, column = 0, columnspan = 25, sticky = "nw", rowspan = 25)
+        
+        
+"""  
+def on_click(event):
+
+    ax = event.inaxes
+    if ax is None:
+        # Occurs when a region not in an axis is clicked...
+        return
+    if event.button is 1:
+        # On left click, zoom the selected axes
+        ax._orig_position = ax.get_position()
+        ax.set_position([0.1, 0.1, 0.85, 0.85])
+        for axis in event.canvas.figure.axes:
+            # Hide all the other axes...
+            if axis is not ax:
+                axis.set_visible(False)
+    elif event.button is 3:
+        # On right click, restore the axes
+        try:
+            ax.set_position(ax._orig_position)
+            for axis in event.canvas.figure.axes:
+                axis.set_visible(True)
+        except AttributeError:
+            # If we haven't zoomed, ignore...
+            pass
+    else:
+        # No need to re-draw the canvas if it's not a left or right click
+        return
+    event.canvas.draw()"""   
+    
+    
 #Returns a matplotlib plot to be displayed on the canvas         
 def plotimg(path,xref,yref):
     
@@ -500,8 +760,10 @@ def plotimg(path,xref,yref):
 
  
 def main():
-    global pics_ind
-    global pics
+    global source_ind
+    global source_paths
+    global frb_paths
+    global nfrb_paths
     global result_file
     global app
     global idir_path
@@ -512,7 +774,7 @@ def main():
     global yref2
     global progcount
     global length
-    global pics_ind2
+    global review_ind
     
     # Input directories as defined in relation to the work. dir.
     idir_path = os.getcwd() + "\\idir"
@@ -527,15 +789,24 @@ def main():
     completeName = os.path.join(odir_path,"results.txt")
     result_file=open(completeName,"a")
    
-    pics = []       #List of filenames to be viewed in program
-    pics_ind = 0    #Index for the img currently being viewed
-    pics_ind2 = 0
+    source_paths = []       #List of filenames to be viewed in program
+    frb_paths = []
+    nfrb_paths = []
+    #paths = []
+    source_ind = 0    #Index for the img currently being viewed
+    review_ind = 0
     
-    #Adds names of files ending with .gif in 'pics' list
+    #Adds names of files ending with .gif in 'source_paths' list
     for file in glob.glob(idir_path + "/" + "*.dat"):
-        pics.append(file)
+        source_paths.append(file)
+        
+    for file in glob.glob(odir_path + "\\frb\\" + "*.dat"):
+        frb_paths.append(file)
+        
+    for file in glob.glob(odir_path + "\\no_frb\\" + "*.dat"):
+        nfrb_paths.append(file)
     
-    length = len(pics)
+    length = len(source_paths)
     progcount = 0
     
     app = start_app()
