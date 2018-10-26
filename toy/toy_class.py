@@ -3,19 +3,20 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import numpy as np
 import threading
+
 #import tkFont
 #from tkinter.filedialog import askdirectory
 #from PIL import ImageTk as itk
 #from PIL import Image
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
-import matplotlib.pyplot as plt
+
 
 fontx = ('Helvetica', 8)
 
 #*****MAIN CLASS*****#
 class start_app(tk.Tk):
-
+    
     def __init__(self, *args, **kwargs):
         tk.Tk.__init__(self, *args, **kwargs)
         # the container is where we'll stack a bunch of frames
@@ -174,8 +175,8 @@ class main_frame(tk.Frame):
         # Buttons to move between plots
         self.right_btn = tk.Button(self, text = "Next plot", command = lambda: self.Right())
         self.left_btn = tk.Button(self, text = "Prev. plot", command = lambda: self.Left())
-        self.right_btn.grid(row = 50, column = 24, columnspan = 6, rowspan = 3, sticky = "nw", pady = (5,5))
-        self.left_btn.grid(row = 50, column = 17, columnspan = 6, rowspan = 3, sticky = "nw", pady = (5,5))
+        self.right_btn.grid(row = 50, column = 24, columnspan = 6, rowspan = 3, pady = (5,5), sticky = "nw")
+        self.left_btn.grid(row = 50, column = 17, columnspan = 6, rowspan = 3, pady = (5,5), sticky = "nw")
         
     def Right(self):
         global source_ind
@@ -470,7 +471,7 @@ class frame1(tk.Frame):
         
     def emptycanvas(self):
     
-        fig = Figure()
+        fig = Figure(figsize = (8,6))
         ax = fig.add_subplot(111)
         ax.set_xlabel("Empty")
         ax.set_ylabel("Empty")
@@ -504,7 +505,6 @@ class preview_frame(tk.Frame):
         self.buttons()
         self.menuobj()
         self.labels()
-        self.textbox()
     
     # Method defining the drop down menu part of the GUI
     def menuobj(self):
@@ -530,44 +530,34 @@ class preview_frame(tk.Frame):
         global progress
         
         #self.canvasupdate(xref2, yref2)   #Shows the first plot of the data set as default at start-up
-        self.emptycanvas()
-        tk.Label(self, text = "X:", font = "Helvetica 9 bold").grid(row = 11, column = 54)
-        tk.Label(self, text = "Y:", font = "Helvetica 9 bold").grid(row = 12, column = 54)
+        self.subplot_canv(xref,yref)
+        tk.Label(self, text = "X:", font = "Helvetica 9 bold").grid(row = 7, column = 54)
+        tk.Label(self, text = "Y:", font = "Helvetica 9 bold").grid(row = 8, column = 54)
         
-    # Method defining the textbox part of the GUI
-    def textbox(self):
-        
-        self.T = tk.Text(self,height = 6,width = 35)
-        self.S = tk.Scrollbar(self)
-        self.S.config(command = self.T.yview)
-        self.T.config(yscrollcommand = self.S.set)
-        self.T.grid(row = 1,column = 56, rowspan = 10, columnspan = 40, sticky = "nw", padx = (0, 15))
-        #self.S.grid(row = 0,column = 9, rowspan = 5, sticky = "E")
-    
     # Method defining the buttons available on the GUI
     def buttons(self):
-        global xref2
-        global yref2
+        global xref
+        global yref
         
         x = tk.IntVar() # Variable value for the x-axis data set given by Radiobutton
         x.set(1)        # Sets the default plot to show time on the x-axis
-        xref2 = x.get()
+        xref = x.get()
         
         y = tk.IntVar() # Variable value for the x-axis data set given by Radiobutton
         y.set(0)        # Sets the default plot to show DM on the y-axis
-        yref2 = y.get()
+        yref = y.get()
 
         datatypes1 = [ "DM", "Time", "StoN", "Width"]
         datatypes2 = [ "DM", "Time", "StoN", "Width"]
         
         # Method called by the Radiobuttons to check and update the xref and yref values if they have changed
         def rdbchange():
-            global xref2
-            global yref2
+            global xref
+            global yref
             
-            if ((y.get() != yref2) or (x.get() != xref2)):
-                xref2 = x.get()
-                yref2 = y.get()
+            if ((y.get() != yref) or (x.get() != xref)):
+                xref = x.get()
+                yref = y.get()
         
         # Radiobutton allowing the user to choose what data to display on the x-axis of the plot
         for val, datatypes1 in enumerate(datatypes1):
@@ -577,7 +567,7 @@ class preview_frame(tk.Frame):
                           variable=x, 
                           value=val,
                           command = rdbchange,
-                          font = fontx).grid(row = 11, column = 56 + val)
+                          font = fontx).grid(row = 7, column = 58 + val)
         
         # Radiobutton allowing the user to choose what data to display on the y-axis of the plot
         for val, datatypes2 in enumerate(datatypes2):
@@ -587,153 +577,102 @@ class preview_frame(tk.Frame):
                           variable=y, 
                           value=val,
                           command = rdbchange,
-                          font = fontx).grid(row = 12, column = 56 + val)
+                          font = fontx).grid(row = 8, column = 58 + val)
         
         # Button to display the plot defined by user's choice of x- and y-values
-        self.show_button = tk.Button(self, text = "Show", command = lambda: self.canvasupdate(xref2, yref2))
-        self.show_button.grid(row = 13, column = 55, columnspan = 5, rowspan = 4)
+        self.show_button = tk.Button(self, text = "Show", command = lambda: self.subplot_canv(xref,yref))
+        self.show_button.grid(row = 8, column = 56, columnspan = 5, rowspan = 4)
         
         # Button to view the previously classified plots
-        self.view_button = tk.Button(self, text = "fdsfdsfds", command = lambda: self.controller.show_frame("main_frame"))
+        self.view_button = tk.Button(self, text = "Return", command = lambda: self.controller.show_frame("main_frame"))
         self.view_button.config(height = 1, width = 20)
-        self.view_button.grid(row = 51, column = 1, columnspan = 10, padx = (10,0), pady = (5,5))
-        """
-        # Buttons to classify whether plot shows an FRB or not.
-        self.frb_button = tk.Button(self,text = "Frb", command = lambda: self.display_choice(1))
-        self.nfrb_button = tk.Button(self,text = "No frb", command = lambda: self.display_choice(0))
-        self.frb_button.config(height = 2, width = 6)
-        self.nfrb_button.config(height = 2, width = 6)
-        self.frb_button.grid(row = 2, column = 51, rowspan = 3, columnspan = 5, padx = 15)
-        self.nfrb_button.grid(row = 6, column = 51, rowspan = 3, columnspan = 5, padx = 15)"""
+        self.view_button.grid(row = 51, column = 0, columnspan = 10, padx = (5,0), pady = (5,5))
         
         # Buttons to move between plots
         self.right_btn = tk.Button(self, text = "Next plot", command = lambda: self.Right())
         self.left_btn = tk.Button(self, text = "Prev. plot", command = lambda: self.Left())
-        self.right_btn.grid(row = 50, column = 24, columnspan = 6, rowspan = 3, sticky = "nw", pady = (5,5))
-        self.left_btn.grid(row = 50, column = 17, columnspan = 6, rowspan = 3, sticky = "nw", pady = (5,5))
+        self.right_btn.grid(row = 50, column = 14, columnspan = 6, rowspan = 3, sticky = "nw", pady = (5,5))
+        self.left_btn.grid(row = 50, column = 11, columnspan = 6, rowspan = 3, sticky = "nw", pady = (5,5))
 
-        
+    # Shows the next 4 thumbnail plots   
     def Right(self):
-        global review_ind
-        global current_choice
-        global xref2
-        global yref2
+        global preview_ind
+        global source_paths
+        global xref
+        global yref
         
-        if (review_ind >= (len(current_choice) - 1)):  # If at the end of the array don't try to go further
+        if (preview_ind >= (len(source_paths) - 4)):    # If at the end of the array don't try to go further
             print("Reached end of files.")
-        else:
-            review_ind += 1
-            self.canvasupdate(current_choice,xref2,yref2)
-            
+        elif (preview_ind >= (len(source_paths) - 8)):  # If less than 4 plots remaining draw the last 4 plots to avoid error
+            preview_ind = (len(source_paths) - 4)
+            self.subplot_canv(xref,yref)
+        else:                                           # Move the index forward 4 steps to display next 4 plots
+            preview_ind += 4
+            self.subplot_canv(xref,yref)
+       
+    # Shows the previous 4 thumbnail plots
     def Left(self):
-        global review_ind
-        global current_choice
-        global xref2
-        global yref2
+        global preview_ind
+        global source_paths
+        global xref
+        global yref
         
-        if (review_ind <= 0):   # If at the beginning on the array don't try to go further back
+        if (preview_ind <= 0):                          # If at the beginning on the array don't try to go further back
             print("At the first file already.")
-        else:
-            review_ind -= 1
-            self.canvasupdate(current_choice,xref2,yref2)
+        elif (preview_ind <= 4):                        # If less than 4 plots remaining draw the first 4 plots to avoid error
+            preview_ind = 0
+            self.subplot_canv(xref,yref)
+        else:                                           # Move the index back 4 steps to display previous 4 plots
+            preview_ind -= 4
+            self.subplot_canv(xref,yref)
 
     #Exits client
     def client_exit(self):
-        exit()   
-    """
-    #Method to put image in appropriate folder, make a note where that is, and change the image on display
-    def display_choice(self, choice):
-        global current_choice
-        global xref2
-        global yref2
-        global review_ind
-        global frb_paths
-        global nfrb_paths
-        
-        review_ind = 0
-        
-        if (choice == 1):
-            self.frb_button.config(relief="sunken")
-            self.nfrb_button.config(relief="raised")
-            current_choice = frb_paths
-            self.canvasupdate(current_choice,xref2,yref2)
-        else:
-            self.nfrb_button.config(relief="sunken")
-            self.frb_button.config(relief="raised")
-            current_choice = nfrb_paths
-            self.canvasupdate(current_choice,xref2,yref2)"""
-
-    def canvasupdate(self, folder, xref2, yref2):
-        global review_ind
-        self.canvas = FigureCanvasTkAgg(plotimg(folder[review_ind],xref2,yref2), self)
-        self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
-     
-    def canvas2(self, folder, xref2, yref2):
-        global review_ind
-        self.canvas = FigureCanvasTkAgg(plotimg(folder[review_ind],xref2,yref2), self, width = 200)
-        self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
-        
-    def prev_plots(self):
-        fig = Figure()
-        ax = fig.add_subplot(111)
-        ax.set_xlabel("Empty")
-        ax.set_ylabel("Empty")
-        ax.set_xlim(left = 0) #Sets lower x-limit to zero
-        self.canvas = FigureCanvasTkAgg(fig, self)
-        self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+        exit()
     
-    def emptycanvas(self):
+    # Canvas function to display the subplots in the window
+    def subplot_canv(self,xref,yref):
+        global source_paths
+        global preview_ind
         
-        fig = Figure()
+        fig = Figure(figsize = (8,6))
         ax1 = fig.add_subplot(221)
         ax2 = fig.add_subplot(222)
         ax3 = fig.add_subplot(223)
         ax4 = fig.add_subplot(224)
         fig.tight_layout()
-        ax1.set_xlabel("Empty")
-        ax1.set_ylabel("Empty")
-        ax2.set_xlabel("Empty")
-        ax2.set_ylabel("Empty")
-        ax3.set_xlabel("Empty")
-        ax3.set_ylabel("Empty")
-        ax4.set_xlabel("Empty")
-        ax4.set_ylabel("Empty")
-        ax1.set_xlim(left = 0) #Sets lower x-limit to zero
         
+        # Draws next 4 plots in the subplots
+        draw_subplot(source_paths[preview_ind + 0],xref,yref,ax1,fig)
+        draw_subplot(source_paths[preview_ind + 1],xref,yref,ax2,fig)
+        draw_subplot(source_paths[preview_ind + 2],xref,yref,ax3,fig)
+        draw_subplot(source_paths[preview_ind + 3],xref,yref,ax4,fig)
+        
+        fig.subplots_adjust(left=0.1, bottom=0.1, right=None, top=None, wspace=0.4, hspace=0.4) # Defines subplot space allocation
         self.canvas1 = FigureCanvasTkAgg(fig, self)
-        #self.canvas1.get_tk_widget().config(width = 200, height = 200)
         self.canvas1.get_tk_widget().grid(row = 0, column = 0, columnspan = 25, sticky = "nw", rowspan = 25)
         
-        
-"""  
-def on_click(event):
-
-    ax = event.inaxes
-    if ax is None:
-        # Occurs when a region not in an axis is clicked...
-        return
-    if event.button is 1:
-        # On left click, zoom the selected axes
-        ax._orig_position = ax.get_position()
-        ax.set_position([0.1, 0.1, 0.85, 0.85])
-        for axis in event.canvas.figure.axes:
-            # Hide all the other axes...
-            if axis is not ax:
-                axis.set_visible(False)
-    elif event.button is 3:
-        # On right click, restore the axes
-        try:
-            ax.set_position(ax._orig_position)
-            for axis in event.canvas.figure.axes:
-                axis.set_visible(True)
-        except AttributeError:
-            # If we haven't zoomed, ignore...
-            pass
-    else:
-        # No need to re-draw the canvas if it's not a left or right click
-        return
-    event.canvas.draw()"""   
+#Returns a matplotlib subplot to be displayed       
+def draw_subplot(path,xref,yref,ax,fig):
     
+    #Imports data from the .dat file located at the specified path
+    Tfile = open(path,'r')
+    data = np.fromfile(Tfile,np.float32,-1) 
+    c = data.reshape((-1,4))
+    Tfile.close()
+    
+    #Defines labels for the axes corresponding to the four different sets of data available
+    axislabels = ["DM", "Time", "StoN", "Width"]
+    columns = np.hsplit(c,4) #x- and yref values dm=0, time=1, ston=2, width=3
+    
+    #Creates the figure to be displayed. xref and yref corresponding to the chosen x and y values to be displayed
+    ax.set_xlabel(axislabels[xref])
+    ax.set_ylabel(axislabels[yref])
+    ax.scatter(columns[xref], columns[yref], s = 7)
+    ax.set_xlim(left = 0) #Sets lower x-limit to zero
+    
+    return fig
+           
     
 #Returns a matplotlib plot to be displayed on the canvas         
 def plotimg(path,xref,yref):
@@ -749,7 +688,7 @@ def plotimg(path,xref,yref):
     columns = np.hsplit(c,4) #x- and yref values dm=0, time=1, ston=2, width=3
     
     #Creates the figure to be displayed. xref and yref corresponding to the chosen x and y values to be displayed
-    fig = Figure()
+    fig = Figure(figsize = (8,6))
     ax = fig.add_subplot(111)
     ax.set_xlabel(axislabels[xref])
     ax.set_ylabel(axislabels[yref])
@@ -775,6 +714,8 @@ def main():
     global progcount
     global length
     global review_ind
+    global preview_ind
+
     
     # Input directories as defined in relation to the work. dir.
     idir_path = os.getcwd() + "\\idir"
@@ -792,9 +733,10 @@ def main():
     source_paths = []       #List of filenames to be viewed in program
     frb_paths = []
     nfrb_paths = []
-    #paths = []
+
     source_ind = 0    #Index for the img currently being viewed
     review_ind = 0
+    preview_ind = 0
     
     #Adds names of files ending with .gif in 'source_paths' list
     for file in glob.glob(idir_path + "/" + "*.dat"):
@@ -808,7 +750,7 @@ def main():
     
     length = len(source_paths)
     progcount = 0
-    
+
     app = start_app()
     app.mainloop()
    
