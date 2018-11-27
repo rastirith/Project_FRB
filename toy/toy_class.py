@@ -79,7 +79,7 @@ class main_frame(tk.Frame):
         
         editmenu = tk.Menu(menu)
         editmenu.add_command(label = "Choose output directory...",command = self.client_exit)
-        menu.add_cascade(label = "bullshit", menu = editmenu)
+        menu.add_cascade(label = "View", menu = editmenu)
         
     # Method defining the Labels (including the canvas) part of the GUI
     def labels(self):
@@ -692,9 +692,9 @@ def plotimg(path,xref,yref):
     ax = fig.add_subplot(111)
     ax.set_xlabel(axislabels[xref])
     ax.set_ylabel(axislabels[yref])
-    ax.scatter(columns[xref], columns[yref], s = 7)
+    ax.scatter(columns[xref], columns[yref], s = 10, facecolors='none', edgecolors='b')
     ax.set_xlim(left = 0) #Sets lower x-limit to zero
-    
+    ax.set_title(path)
     return fig
 
  
