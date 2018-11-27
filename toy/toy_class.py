@@ -3,7 +3,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import numpy as np
 import threading
-
+import matplotlib.pyplot as plt
 #import tkFont
 #from tkinter.filedialog import askdirectory
 #from PIL import ImageTk as itk
@@ -118,8 +118,8 @@ class main_frame(tk.Frame):
         y.set(0)        # Sets the default plot to show DM on the y-axis
         yref = y.get()
 
-        datatypes1 = [ "DM", "Time", "StoN", "Width"]
-        datatypes2 = [ "DM", "Time", "StoN", "Width"]
+        datatypes1 = [ "DM", "Time", "s/n", "Width"]
+        datatypes2 = [ "DM", "Time", "s/n", "Width"]
         
         # Method called by the Radiobuttons to check and update the xref and yref values if they have changed
         def rdbchange():
@@ -357,8 +357,8 @@ class frame1(tk.Frame):
         y.set(0)        # Sets the default plot to show DM on the y-axis
         yref2 = y.get()
 
-        datatypes1 = [ "DM", "Time", "StoN", "Width"]
-        datatypes2 = [ "DM", "Time", "StoN", "Width"]
+        datatypes1 = [ "DM", "Time", "s/n", "Width"]
+        datatypes2 = [ "DM", "Time", "s/n", "Width"]
         
         # Method called by the Radiobuttons to check and update the xref and yref values if they have changed
         def rdbchange():
@@ -394,7 +394,7 @@ class frame1(tk.Frame):
         self.show_button.grid(row = 13, column = 55, columnspan = 5, rowspan = 4)
         
         # Button to view the previously classified plots
-        self.view_button = tk.Button(self, text = "fdsfdsfds", command = lambda: self.controller.show_frame("main_frame"))
+        self.view_button = tk.Button(self, text = "Return", command = lambda: self.controller.show_frame("main_frame"))
         self.view_button.config(height = 1, width = 20)
         self.view_button.grid(row = 51, column = 1, columnspan = 10, padx = (10,0), pady = (5,5))
         
@@ -547,8 +547,8 @@ class preview_frame(tk.Frame):
         y.set(0)        # Sets the default plot to show DM on the y-axis
         yref = y.get()
 
-        datatypes1 = [ "DM", "Time", "StoN", "Width"]
-        datatypes2 = [ "DM", "Time", "StoN", "Width"]
+        datatypes1 = [ "DM", "Time", "s/n", "Width"]
+        datatypes2 = [ "DM", "Time", "s/n", "Width"]
         
         # Method called by the Radiobuttons to check and update the xref and yref values if they have changed
         def rdbchange():
@@ -662,8 +662,8 @@ def draw_subplot(path,xref,yref,ax,fig):
     Tfile.close()
     
     #Defines labels for the axes corresponding to the four different sets of data available
-    axislabels = ["DM", "Time", "StoN", "Width"]
-    columns = np.hsplit(c,4) #x- and yref values dm=0, time=1, ston=2, width=3
+    axislabels = ["DM", "Time", "s/n", "Width"]
+    columns = np.hsplit(c,4) #x- and yref values dm=0, time=1, s/n=2, width=3
     
     #Creates the figure to be displayed. xref and yref corresponding to the chosen x and y values to be displayed
     ax.set_xlabel(axislabels[xref])
@@ -684,8 +684,8 @@ def plotimg(path,xref,yref):
     Tfile.close()
     
     #Defines labels for the axes corresponding to the four different sets of data available
-    axislabels = ["DM", "Time", "StoN", "Width"]
-    columns = np.hsplit(c,4) #x- and yref values dm=0, time=1, ston=2, width=3
+    axislabels = ["DM", "Time", "s/n", "Width"]
+    columns = np.hsplit(c,4) #x- and yref values dm=0, time=1, s/n=2, width=3
     
     #Creates the figure to be displayed. xref and yref corresponding to the chosen x and y values to be displayed
     fig = Figure(figsize = (8,6))
@@ -715,7 +715,6 @@ def main():
     global length
     global review_ind
     global preview_ind
-
     
     # Input directories as defined in relation to the work. dir.
     idir_path = os.getcwd() + "\\idir"
