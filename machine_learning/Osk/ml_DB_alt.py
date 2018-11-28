@@ -8,6 +8,16 @@ from sklearn.cluster import DBSCAN
 import glob, os
 from sklearn import preprocessing
 import scipy.cluster.hierarchy as hcluster 
+import sys
+
+
+def progressBar(value, endvalue, bar_length=20):
+    
+    percent = float(value) / endvalue
+    arrow = '-' * int(round(percent * bar_length) - 1) + '>'
+    spaces = ' ' * (bar_length - len(arrow))
+    
+    sys.stdout.write("\rPercent: [{0}] {1}%".format(arrow + spaces, int(round(percent * 100))))
 
 def val(path, ref):
     
@@ -30,8 +40,38 @@ def sort(arr,num):
     xsorted = np.sort(arr)[:num]
     return xsorted
 
+def clusterOrder(clusterArr):
+    
+    lab_arr = np.unique(clusterArr)
+    
+    for i in range(len(clusterArr)): 
+        for q in range(1,len(lab_arr)):
+            if (lab_arr[q] == clusterArr[i]):
+                clusterArr[i] = q - 1
+                break
+
+def clusterSort(clusterArr, pointsArr):
+    temp_arr = []     # Array of arrays containing points for each label. e.g. labels_arr[0] contains all points with label -1
+    lab_arr = np.unique(clusterArr)
+
+    for i in range(len(np.unique(clusterArr))):
+        temp_list = []
+        temp_arr.append(temp_list)
+    
+    for i in range(len(clusterArr)):
+        for q in range(len(lab_arr)):
+            if (clusterArr[i] == lab_arr[q]):
+                temp_arr[q].append(pointsArr[i])
+                break
+
+    for q in range(len(temp_arr)):
+        temp_arr[q] = np.array(temp_arr[q])
+    
+    temp_arr = np.array(temp_arr)
+    return temp_arr
+
 source_paths = []
-path = 40
+path = 48
 
 for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
     source_paths.append(file)
@@ -66,24 +106,8 @@ clusters = DBSCAN(eps=xeps, min_samples = xmin).fit_predict(X_scaled)
 length = len(points) - len(clusters)
 clusters = np.insert(clusters,0,np.full(length,-1))
 
-labels_arr = []     # Array of arrays containing points for each label. e.g. labels_arr[0] contains all points with label -1
-
-# Puts points of different labels in different arrays in 'labels_arr'
-# Array at index 0 contains all points with label -1, array at index 1 contains all points with label 0 etc.
-for p in range(len(np.unique(clusters))):
-    temp_points = []
-    for i in range(len(clusters)):
-        if (p - 1 == clusters[i]):
-            temp_points.append(points[i])
-    labels_arr.append(np.array(temp_points))
-
-labels_arr = np.array(labels_arr)
-
-# Condition that sets all points with dm below dm_lim to be classified as RFI
-for i in range(len(clusters)):
-    
-    if (points[i][0] <= dm_lim):
-        clusters[i] = -1
+labels_arr = clusterSort(clusters, points)
+clusterOrder(clusters)
 
 dm_lim = 70         # Increased DM-limit to check for clusters with 'fraction' of their points below this limit
 fraction = 0.05 
@@ -95,6 +119,23 @@ for q in range(1,len(np.unique(clusters))):
 
     if ((len(temp) > 0) and (max(temp) < dm_lim)):          # If the highest number in temp is below dm_lim then so is the rest in 'temp'
 
+        for i in range(len(clusters)):
+            if (clusters[i] == q - 1):
+                clusters[i] = -1
+                
+# Condition that sets all points with dm below dm_lim to be classified as RFI    
+for i in range(len(clusters)):
+    if (points[i][0] <= dm_lim):
+        clusters[i] = -1
+ 
+
+labels_arr = clusterSort(clusters, points)
+clusterOrder(clusters)
+
+time_diff = 0.05
+for q in range(1,len(np.unique(clusters))):
+    quantile_diff = np.quantile(labels_arr[q][:,1], 0.75) - np.quantile(labels_arr[q][:,1], 0.25)
+    if (quantile_diff > time_diff):
         for i in range(len(clusters)):
             if (clusters[i] == q - 1):
                 clusters[i] = -1
