@@ -85,27 +85,6 @@ def DF(path):
 
 #array of file locations and chosing the file to inspect with path
 source_paths = []
-<<<<<<< HEAD
-path = 53
-
-for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
-    source_paths.append(file)
-    
-x = val(source_paths[path],0) #DM
-y = val(source_paths[path],1) #Time
-z = val(source_paths[path],2) #S/N
-
-points_db = list(zip(x, y))
-points_db = np.array(points_db)
-points_db = points_db[points_db[:,0].argsort()]
-
-points = list(zip(x, y, z))
-
-points = np.array(points)
-points = points[points[:,0].argsort()]
-
-dm_lim = 0.03*max(x)
-=======
 path = 48
 #filling source_paths from the idir
 for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
@@ -118,13 +97,14 @@ FILE = source_paths[path]
 df = DF(FILE)
 #getting arrays from df
 orig_X = np.array(df)
-X = np.array(df.drop(columns=['Width','S/N']))
+X_db = np.array(df.drop(columns=['Width', 'S/N']))
+X = np.array(df.drop(columns=['Width']))
 
 #sorted by DM
-points = X[X[:,1].argsort()]
+points_db = X_db[X_db[:,0].argsort()]
+points = X[X[:,0].argsort()]
 
-dm_lim = 0.03*max(points[:,0])
->>>>>>> d341dd910bcb2df474917b2cc8c752ca76c303bd
+dm_lim = 0.03*max(points_db[:,0])
 points_new = []
 print("Dm limit 1: " + str(round(dm_lim,1)))
 
@@ -172,7 +152,6 @@ for i in range(len(clusters)):
 labels_arr = clusterSort(clusters, points)
 clusterOrder(clusters)
 
-
 for q in range(1,len(np.unique(clusters))):
     
     signalToDm = list(zip(labels_arr[q][:,0], labels_arr[q][:,2]))
@@ -184,7 +163,7 @@ for q in range(1,len(np.unique(clusters))):
         signal_scaled[:,1][i] = signal_scaled[:,1][i] - min(signal_scaled[:,1])
         
     max_val = max(signal_scaled[:,1])
-
+    print(signal_scaled)
     mu = 0
     variance = 1
     sigma = math.sqrt(variance)
@@ -214,9 +193,9 @@ for q in range(1,len(np.unique(clusters))):
     ax.set_ylabel("S/N")
     #plt.show()
 
-#fig = plt.figure()
-#ax1 = fig.add_subplot(111)
-#ax1.scatter(points[:, 1], points[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 10)
+fig = plt.figure()
+ax1 = fig.add_subplot(111)
+ax1.scatter(points[:, 1], points[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 10)
 
 
 
