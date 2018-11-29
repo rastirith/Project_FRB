@@ -70,21 +70,36 @@ def clusterSort(clusterArr, pointsArr):
     temp_arr = np.array(temp_arr)
     return temp_arr
 
+#creates dataframe for file
+def DF(path):
+    axislabels = ["DM", "Time", "S/N", "Width"]
+    Tfile = open(path,'r')
+    data = np.fromfile(Tfile,np.float32,-1) 
+    c = data.reshape((-1,4))
+    df = pd.DataFrame(c,columns=axislabels)
+    Tfile.close()
+    return df
+
+#array of file locations and chosing the file to inspect with path
 source_paths = []
 path = 48
-
+#filling source_paths from the idir
 for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
     source_paths.append(file)
     
-x = val(source_paths[path],0) #DM
-y = val(source_paths[path],1) #Time
+    
+#setting which file to open
+FILE = source_paths[path]
+#getting df for test file
+df = DF(FILE)
+#getting arrays from df
+orig_X = np.array(df)
+X = np.array(df.drop(columns=['Width','S/N']))
 
-points = list(zip(x, y))
+#sorted by DM
+points = X[X[:,1].argsort()]
 
-points = np.array(points)
-points = points[points[:,0].argsort()]
-
-dm_lim = 0.03*max(x)
+dm_lim = 0.03*max(points[:,0])
 points_new = []
 print("Dm limit 1: " + str(round(dm_lim,1)))
 
