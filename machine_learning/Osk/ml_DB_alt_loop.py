@@ -77,26 +77,33 @@ path = 0
 
 for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
     source_paths.append(file)
-  
-for i in range((30)):
-    progressBar(i,30)
-    path = i + 30
+ 
+    
+    
+for i in [29]:
+    #progressBar(i,30)
+    path = i
     
     x = val(source_paths[path],0) #DM
     y = val(source_paths[path],1) #Time
+    z = val(source_paths[path],2) #S/N
+
+    points_db = list(zip(x, y))
+    points_db = np.array(points_db)
+    points_db = points_db[points_db[:,0].argsort()]
     
-    points = list(zip(x, y))
+    points = list(zip(x, y, z))
     
     points = np.array(points)
     points = points[points[:,0].argsort()]
     
     dm_lim = 0.03*max(x)
     points_new = []
-    #print("Dm limit 1: " + str(round(dm_lim,1)))
+    print("Dm limit 1: " + str(round(dm_lim,1)))
     
-    for i in range(len(points)):
-        if (points[i][0] > dm_lim):
-            points_new.append(points[i])
+    for i in range(len(points_db)):
+        if (points_db[i][0] > dm_lim):
+            points_new.append(points_db[i])
            
     points_new = np.array(points_new)
     
@@ -115,7 +122,7 @@ for i in range((30)):
     labels_arr = clusterSort(clusters, points)
     clusterOrder(clusters)
     
-    dm_lim = 70         # Increased DM-limit to check for clusters with 'fraction' of their points below this limit
+    dm_lim = 40         # Increased DM-limit to check for clusters with 'fraction' of their points below this limit
     fraction = 0.05 
     
     # Condition that sets all clusters with 'fraction' of its points below dm_lim to also be classified as RFI
@@ -138,24 +145,40 @@ for i in range((30)):
     labels_arr = clusterSort(clusters, points)
     clusterOrder(clusters)
     
-    time_diff = 0.05
+    """
+    time_diff = 0.08
     for q in range(1,len(np.unique(clusters))):
         quantile_diff = np.quantile(labels_arr[q][:,1], 0.75) - np.quantile(labels_arr[q][:,1], 0.25)
         if (quantile_diff > time_diff):
             for i in range(len(clusters)):
                 if (clusters[i] == q - 1):
-                    clusters[i] = -1
+                    clusters[i] = -1"""
+
     
     if (len(np.unique(clusters) > 1)):
         fig = plt.figure()
-        plt.scatter(points[:, 1], points[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 10)
+        ax1 = fig.add_subplot(111)
+        ax1.scatter(points[:, 1], points[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 10)
+        ax1.set_xlabel("Time")
+        ax1.set_ylabel("DM")
+        ax1.set_title(path)
+        for q in range(1,len(np.unique(clusters))):
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.scatter(labels_arr[q][:, 0], labels_arr[q][:, 2], alpha = 0.4, vmin = -1, s = 10)
+            ax.set_xlabel("DM")
+            ax.set_ylabel("S/N")
+            ax.set_title(path)
+        
+        #fig = plt.figure()
+        #plt.scatter(points[:, 1], points[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 10)
         """
         print("Dm limit 2: " + str(dm_lim))
         print("Old array length: " + str(len(points)))
         print("New array length: " + str(len(points_new)))"""
         
-        plt.xlabel("Time")
-        plt.ylabel("DM")
-        plt.title(source_paths[path])
+        #plt.xlabel("Time")
+        #plt.ylabel("DM")
+        #plt.title(source_paths[path])
         
-        plt.show()
+        #plt.show()
