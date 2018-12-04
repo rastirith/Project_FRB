@@ -129,6 +129,19 @@ clusters = np.insert(clusters,0,np.full(length,-1))
 labels_arr = clusterSort(clusters, points)
 clusterOrder(clusters)
 
+
+#Noise condition for Nevents<Nmin =>noise
+N_min = 20 #tuneable number (set to match Karako)
+for q in range(1,len(np.unique(clusters))):
+    if (len(labels_arr[q]) < N_min):
+        for i in range(len(clusters)):
+            if (clusters[i] == q - 1):
+                clusters[i] = -1
+#Re-order        
+labels_arr = clusterSort(clusters, points)
+clusterOrder(clusters)
+
+          
 dm_lim = 40         # Increased DM-limit to check for clusters with 'fraction' of their points below this limit
 fraction = 0.05 
 
@@ -148,20 +161,139 @@ for i in range(len(clusters)):
     if (points[i][0] <= dm_lim):
         clusters[i] = -1
  
-
 labels_arr = clusterSort(clusters, points)
 clusterOrder(clusters)
 
+# Condition for peak location
 for q in range(1,len(np.unique(clusters))):
     
     signalToDm = list(zip(labels_arr[q][:,0], labels_arr[q][:,2]))
     signalToDm = np.array(signalToDm)
+    min_val = min(signalToDm[:,1])
+    #y=0 for visualisation
+    for i in range(len(signalToDm[:,1])):
+        signalToDm[:,1][i] = signalToDm[:,1][i] - min_val
+        
+    #splitting into chunks
+    split_param = 7 #parameter to determine splitting of cluster for analysis
+    dummy = np.array_split(signalToDm,split_param)
+    
+    meanSN = []
+    meanDM = []
+    for i in range(len(dummy)):
+        tempSN = np.mean(dummy[i][:,1])
+        tempDM = np.mean(dummy[i][:,0])
+        meanSN.append(tempSN)
+        meanDM.append(tempDM)
+    
+    #Condition for location of peak S/N
+    max_ind = np.argmax(meanSN)
+    if (max_ind > 4) or (max_ind < 2):
+        for i in range(len(clusters)):
+            if (clusters[i] == q - 1):
+                clusters[i] = -1
+    
+    #developing peak shape conditions
+    else:
+        weight_1 = 1/3
+        weight_2 = 2/3
+        check_1 = 0.075
+        check_2 = 0.15
+        score = [3,2,1,1]
+        rating = 0
+        for i in range(max_ind - 1, -1, -1):
+            ratio=meanSN[i]/meanSN[i+1]
+            
+            if ((ratio>=(1-check_1)) and (ratio<=1)):
+                rating += weight_1*score[max_ind-(i+1)]
+            elif ((ratio>=(1-check_2)) and (ratio<=1)):
+                rating += weight_2*score[max_ind-(i+1)]
+            elif ratio <=1:
+                rating += score[max_ind-(i+1)]
+                
+        for i in range((max_ind+1),split_param):
+            ratio=meanSN[i]/meanSN[i-1]
+            
+            if ((ratio>=(1-check_1)) and (ratio<=1)):
+                rating += weight_1*score[i-max_ind-1]
+            elif ((ratio>=(1-check_2)) and (ratio<=1)):
+                rating += weight_2*score[i-max_ind-1]
+            elif ratio <=1:
+                rating += score[i-max_ind-1]
+        confidence = rating/12
+        
+        xwidth=(min(signalToDm[:,0]) - max(signalToDm[:,0]))/12
+        
+        fig = plt.figure()
+        ax1 = fig.add_subplot(111)
+        ax1.bar(meanDM,meanSN, align='center',width=xwidth, alpha=0.2)
+        #plt.show()
+        ax1.set_title(confidence)
+        ax = fig.add_subplot(111)
+        ax.scatter(signalToDm[:,0], signalToDm[:, 1], alpha = 0.4, vmin = -1, s = 10)
+        #ax.plot(x,y)
+        ax.set_xlabel("DM")
+        ax.set_ylabel("S/N")
+        plt.show()    
+        
+        
+#Re-order        
+labels_arr = clusterSort(clusters, points)
+clusterOrder(clusters)                
+
+
+
+            
+"""                
+#Plotting for visualisation of S/N             
+for q in range(1,len(np.unique(clusters))):    
+    signalToDm = list(zip(labels_arr[q][:,0], labels_arr[q][:,2]))
+    signalToDm = np.array(signalToDm)
+    min_val = min(signalToDm[:,1])
+    #y=0 for visualisation
+    for i in range(len(signalToDm[:,1])):
+        signalToDm[:,1][i] = signalToDm[:,1][i] - min_val
+        
+    #splitting into chunks
+    dummy = np.array_split(signalToDm,split_param)
+    
+    meanSN = []
+    meanDM = []
+    for i in range(len(dummy)):
+        tempSN = np.mean(dummy[i][:,1])
+        tempDM = np.mean(dummy[i][:,0])
+        meanSN.append(tempSN)
+        meanDM.append(tempDM)
+     
+    xwidth=(min(signalToDm[:,0]) - max(signalToDm[:,0]))/12
+    
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+    ax1.bar(meanDM,meanSN, align='center',width=xwidth, alpha=0.2)
+    #plt.show()
+    ax1.set_title(np.argmax(meanSN))
+    ax = fig.add_subplot(111)
+    ax.scatter(signalToDm[:,0], signalToDm[:, 1], alpha = 0.4, vmin = -1, s = 10)
+    #ax.plot(x,y)
+    ax.set_xlabel("DM")
+    ax.set_ylabel("S/N")
+    plt.show()
+"""           
+#Plotting DM TIME w/clusters
+fig = plt.figure()
+ax1 = fig.add_subplot(111)
+ax1.scatter(points[:, 1], points[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 10)
+
+
+
+"""
     signal_scaled = preprocessing.StandardScaler().fit_transform(signalToDm)
     #print(signal_scaled)
     
+    #y=0
     for i in range(len(signal_scaled[:,1])):
         signal_scaled[:,1][i] = signal_scaled[:,1][i] - min(signal_scaled[:,1])
-        
+     
     max_val = max(signal_scaled[:,1])
     print(signal_scaled)
     mu = 0
@@ -183,23 +315,7 @@ for q in range(1,len(np.unique(clusters))):
     
     red_chi = sum/len(signal_scaled[:,1])
     print(red_chi)
-        
-    
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.scatter(signal_scaled[:,0], signal_scaled[:, 1], alpha = 0.4, vmin = -1, s = 10)
-    ax.plot(x,y)
-    ax.set_xlabel("DM")
-    ax.set_ylabel("S/N")
-    #plt.show()
-
-fig = plt.figure()
-ax1 = fig.add_subplot(111)
-ax1.scatter(points[:, 1], points[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 10)
-
-
-
-
+"""   
 
 """
 time_diff = 0.05
