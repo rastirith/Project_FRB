@@ -8,7 +8,7 @@ import pandas as pd
 from sklearn.cluster import DBSCAN
 import glob, os
 from sklearn import preprocessing 
-
+import itertools
 
 # Returns 'num' lowest elements of array 'arr' in a new array
 def sort(arr,num):
@@ -208,6 +208,8 @@ for i in range(0,73):
             meanSN.append(tempSN)
             meanDM.append(tempDM)
         
+        max_val = max(meanSN + min_val)
+        
         #Condition for location of peak S/N
         max_ind = np.argmax(meanSN)
         if (max_ind > 4) or (max_ind < 2):
@@ -219,10 +221,25 @@ for i in range(0,73):
         else:
             weight_1 = 1/3
             weight_2 = 2/3
+            weight_3 = -0.1
             check_1 = 0.075
             check_2 = 0.15
-            score = [1,1,1,1]
+            score = [1,2,1.5,1.5]
             rating = 0
+            
+            sub_arr1 = meanDM[0:max_ind + 1]
+            sub_arr2 = meanDM[max_ind:len(meanDM)]
+            
+            diffs1 = [abs(e[1] - e[0]) for e in itertools.permutations(sub_arr1, 2)]
+            diffs2 = [abs(e[1] - e[0]) for e in itertools.permutations(sub_arr2, 2)]
+            
+            avg_diff1 = sum(diffs1)/len(diffs1)
+            avg_diff2 = sum(diffs2)/len(diffs2)
+            
+            diffDiff = abs(avg_diff1 - avg_diff2)
+            sumDiff = avg_diff1 + avg_diff2
+            diffRatio = diffDiff/sumDiff
+            
             for i in range(max_ind - 1, -1, -1):
                 ratio=meanSN[i]/meanSN[i+1]
                 
@@ -232,6 +249,8 @@ for i in range(0,73):
                     rating += weight_2*score[max_ind-(i+1)]
                 elif ratio <=1:
                     rating += score[max_ind-(i+1)]
+                else:
+                    rating += weight_3*score[max_ind-(i+1)]
                     
             for i in range((max_ind+1),split_param):
                 ratio=meanSN[i]/meanSN[i-1]
@@ -242,11 +261,17 @@ for i in range(0,73):
                     rating += weight_2*score[i-max_ind-1]
                 elif ratio <=1:
                     rating += score[i-max_ind-1]
-            confidence = rating/6
+                else:
+                    rating += weight_3*score[i-max_ind-1]
+            confidence = rating/9
+            SN_conf = 0.9828639 + ((-0.9828632502)/(1+((max_val/4.630117)**1.341797)))
+            diff_conf = 0.2 + ((0.46)/(1+((diffRatio/0.5949996)**1450.932)))
+            tot_conf = 0.25*SN_conf + 0.15* diff_conf + 0.60*confidence
+            
             
             #Pbin getting a count depending on conf. percentile
             for i in range(1,11):
-                if confidence<(i/10):
+                if tot_conf<(i/10):
                     Pbin[i-1]+=1
                     break
             
@@ -279,4 +304,4 @@ for i in range(0,73):
     #print("Old array length: " + str(len(points)))
     #print("New array length: " + str(len(points_new)))
     
-df2.to_csv('condition_stats_2',index=False)
+df2.to_csv('condition_stats_5',index=False)
