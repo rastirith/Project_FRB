@@ -22,22 +22,6 @@ def progressBar(value, endvalue, bar_length=20):
     
     sys.stdout.write("\rPercent: [{0}] {1}%".format(arrow + spaces, int(round(percent * 100))))
 
-def val(path, ref):
-    
-    #Imports data from the .dat file located at the specified path
-    Tfile = open(path,'r')
-    data = np.fromfile(Tfile,np.float32,-1) 
-    c = data.reshape((-1,4))
-    Tfile.close()
-    refarr = []
-    #Defines labels for the axes corresponding to the four different sets of data available
-    #axislabels = ["DM", "Time", "StoN", "Width"]
-    columns = np.hsplit(c,4) #x- and yref values dm=0, time=1, ston=2, width=3
-    for i in range(len(columns[ref])):
-        refarr.append(columns[ref][i][0])
-        
-    return refarr
-
 # Returns 'num' lowest elements of array 'arr' in a new array
 def sort(arr,num):
     xsorted = np.sort(arr)[:num]
@@ -82,6 +66,20 @@ def DF(path):
     df = pd.DataFrame(c,columns=axislabels)
     Tfile.close()
     return df
+
+def mean(arr):
+    xsum = 0
+    for i in (arr):
+        xsum += i
+    mean = xsum/len(arr)
+    return mean
+
+def variance(arr,avg):
+    xsum = 0
+    for i in (arr):
+        xsum += (i - avg)**2
+    var = xsum/len(arr)
+    return var
 
 #array of file locations and chosing the file to inspect with path
 source_paths = []
@@ -154,44 +152,70 @@ clusterOrder(clusters)
 
 for q in range(1,len(np.unique(clusters))):
     
-    signalToDm = list(zip(labels_arr[q][:,0], labels_arr[q][:,2]))
-    signalToDm = np.array(signalToDm)
-    signal_scaled = preprocessing.StandardScaler().fit_transform(signalToDm)
-    #print(signal_scaled)
+   signalToDm = list(zip(labels_arr[q][:,0], labels_arr[q][:,2]))
+   signalToDm = np.array(signalToDm)
+   signal_scaled = preprocessing.StandardScaler().fit_transform(signalToDm)
+   #print(signal_scaled)
     
-    for i in range(len(signal_scaled[:,1])):
-        signal_scaled[:,1][i] = signal_scaled[:,1][i] - min(signal_scaled[:,1])
-        
-    max_val = max(signal_scaled[:,1])
-    print(signal_scaled)
-    mu = 0
-    variance = 1
-    sigma = math.sqrt(variance)
-    x = np.linspace(mu - 3*sigma, mu + 3*sigma, 1001)
-    y = mlab.normpdf(x, mu, sigma)
-    for i in range(len(y)):
-        y[i] = y[i]*2*max_val
-        
-    sum = 0
-    for i in range(len(signal_scaled[:,1])):
-        temp_dm = signal_scaled[:,0][i] - min(signal_scaled[:,0])
-        frac = temp_dm/(max(signal_scaled[:,0]) - min(signal_scaled[:,0]))
-        y_temp = y[int(round(frac*1000))]
-        
-        term = ((signal_scaled[:,1][i] - y_temp)**2)/y_temp
-        sum += term
     
-    red_chi = sum/len(signal_scaled[:,1])
-    print(red_chi)
+   #splitting into chunks
+   #print(len(signalToDm))
+
+   dummy = np.array_split(signalToDm,5)
+   #print(len(dummy))
+   #for i in range(8):
+   #    print(dummy[i][:,1])
+   avg = []
+   for i in range(len(dummy)):
+       temp = np.mean(dummy[i][:,1])
+       avg.append(temp)
+   print(avg)
+    
+    
+   for i in range(len(signal_scaled[:,1])):
+       signal_scaled[:,1][i] = signal_scaled[:,1][i] - min(signal_scaled[:,1])
+        
+   max_val = max(signal_scaled[:,1])
+   #ratio = max_val/
+    
+    
+   #average = mean(labels_arr[q][:,0])
+   #var = variance(labels_arr[q][:,0], average)
+
+   #temp_dm = labels_arr[q][:,0]
+   #temp_s = labels_arr[q][:,2]
+
+   sigma = math.sqrt(1)
+   x = np.linspace(0 - 3*sigma, 0 + 3*sigma, 1001)
+   y = mlab.normpdf(x, 0, sigma)
+    
+    #ratio = max(labels_arr[q][:,2])/max(y)
+    
+   for i in range(len(y)):
+       y[i] = y[i]*max_val*2
+        
+   xsum = 0
+   """
+   for i in range(len(labels_arr[q][:,0])):
+        #temp_dm = signal_scaled[:,0][i] - min(signal_scaled[:,0])
+        #frac = temp_dm/(max(labels_arr[q][:,0]) - min(signal_scaled[:,0]))
+        #y_temp = y[int(round(frac*1000))]
+        print(signal_scaled[:,0])
+        print("mod: " + str(y_temp))        
+        #term = ((signal_scaled[:,1][i] - y_temp)**2)/y_temp
+        #xsum += term"""
+    
+    #red_chi = xsum/len(signal_scaled[:,1])
+    #print(red_chi)
         
     
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.scatter(signal_scaled[:,0], signal_scaled[:, 1], alpha = 0.4, vmin = -1, s = 10)
-    ax.plot(x,y)
-    ax.set_xlabel("DM")
-    ax.set_ylabel("S/N")
-    #plt.show()
+   fig = plt.figure()
+   ax = fig.add_subplot(111)
+   ax.scatter(signal_scaled[:,0], signal_scaled[:,1], alpha = 0.4, vmin = -1, s = 10)
+   ax.plot(x,y)
+   ax.set_xlabel("DM")
+   ax.set_ylabel("S/N")
+   #plt.show()
 
 fig = plt.figure()
 ax1 = fig.add_subplot(111)
