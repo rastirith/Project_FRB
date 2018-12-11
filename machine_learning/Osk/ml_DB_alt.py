@@ -85,7 +85,7 @@ def DF(path):
 
 #array of file locations and chosing the file to inspect with path
 source_paths = []
-path = 48
+path = 8
 #filling source_paths from the idir
 for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
     source_paths.append(file)

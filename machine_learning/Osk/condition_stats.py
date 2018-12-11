@@ -9,6 +9,7 @@ from sklearn.cluster import DBSCAN
 import glob, os
 from sklearn import preprocessing 
 import itertools
+import matplotlib.pyplot as plt
 
 # Returns 'num' lowest elements of array 'arr' in a new array
 def sort(arr,num):
@@ -70,7 +71,9 @@ df2 = pd.DataFrame(columns=df2_labels)
 #filling source_paths from the idir
 for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
     source_paths.append(file)
-    
+
+ratios = []
+   
 for i in range(0,73): 
     #Variables for counting
     #step 1
@@ -192,6 +195,9 @@ for i in range(0,73):
         signalToDm = list(zip(labels_arr[q][:,0], labels_arr[q][:,2]))
         signalToDm = np.array(signalToDm)
         min_val = min(signalToDm[:,1])
+        #sharpness
+        scaled_signal = preprocessing.MinMaxScaler().fit_transform(signalToDm)
+             
         #y=0 for visualisation
         for i in range(len(signalToDm[:,1])):
             signalToDm[:,1][i] = signalToDm[:,1][i] - min_val
@@ -199,17 +205,27 @@ for i in range(0,73):
         #splitting into chunks
         split_param = 7 #parameter to determine splitting of cluster for analysis
         dummy = np.array_split(signalToDm,split_param)
+        dummy2 = np.array_split(scaled_signal,split_param) #sharpness
         
         meanSN = []
         meanDM = []
+        
+        s_meanSN = []
+        s_meanDM = []
         for i in range(len(dummy)):
             tempSN = np.mean(dummy[i][:,1])
             tempDM = np.mean(dummy[i][:,0])
             meanSN.append(tempSN)
             meanDM.append(tempDM)
+            #testing sharpness
+            s_tempSN = np.mean(dummy2[i][:,1])
+            s_tempDM = np.mean(dummy2[i][:,0])
+            s_meanSN.append(s_tempSN)
+            s_meanDM.append(s_tempDM)
         
         max_val = max(meanSN + min_val)
         
+       
         #Condition for location of peak S/N
         max_ind = np.argmax(meanSN)
         if (max_ind > 4) or (max_ind < 2):
@@ -268,10 +284,15 @@ for i in range(0,73):
             diff_conf = 0.2 + ((0.46)/(1+((diffRatio/0.5949996)**1450.932)))
             tot_conf = 0.25*SN_conf + 0.15* diff_conf + 0.60*confidence
             
-            
+            #sharpness
+            diff_SN = max(s_meanSN) - min(s_meanSN)
+            diff_DM = s_meanDM[-1] - s_meanDM[0] #?????center this around peak
+            sharp_ratio = diff_SN/diff_DM #height/width
+            ratios.append(sharp_ratio)
+        
             #Pbin getting a count depending on conf. percentile
             for i in range(1,11):
-                if tot_conf<(i/10):
+                if sharp_ratio<(i/10):
                     Pbin[i-1]+=1
                     break
             
@@ -303,5 +324,6 @@ for i in range(0,73):
     #print("Dm limit 2: " + str(dm_lim))
     #print("Old array length: " + str(len(points)))
     #print("New array length: " + str(len(points_new)))
-    
-df2.to_csv('condition_stats_5',index=False)
+
+plt.hist(ratios,bins=10)
+df2.to_csv('condition_stats_sharpness',index=False)
