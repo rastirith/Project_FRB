@@ -12,6 +12,8 @@ import scipy.cluster.hierarchy as hcluster
 import sys
 import math
 import warnings
+import itertools
+
 warnings.filterwarnings("ignore",category=mpl.cbook.mplDeprecation)
 
 def progressBar(value, endvalue, bar_length=20):
@@ -83,7 +85,9 @@ def variance(arr,avg):
 
 #array of file locations and chosing the file to inspect with path
 source_paths = []
-path = 8
+
+path = 42
+
 #filling source_paths from the idir
 for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
     source_paths.append(file)
@@ -139,8 +143,8 @@ for q in range(1,len(np.unique(clusters))):
 labels_arr = clusterSort(clusters, points)
 clusterOrder(clusters)
 
-          
-dm_lim = 40         # Increased DM-limit to check for clusters with 'fraction' of their points below this limit
+      
+#dm_lim = 40         # Increased DM-limit to check for clusters with 'fraction' of their points below this limit
 fraction = 0.05 
 
 # Condition that sets all clusters with 'fraction' of its points below dm_lim to also be classified as RFI
@@ -162,12 +166,17 @@ for i in range(len(clusters)):
 labels_arr = clusterSort(clusters, points)
 clusterOrder(clusters)
 
+ratios = []
+
 # Condition for peak location
 for q in range(1,len(np.unique(clusters))):
 
     signalToDm = list(zip(labels_arr[q][:,0], labels_arr[q][:,2]))
     signalToDm = np.array(signalToDm)
     min_val = min(signalToDm[:,1])
+    #sharpness
+    scaled_signal = preprocessing.MinMaxScaler().fit_transform(signalToDm)
+    
     #y=0 for visualisation
     for i in range(len(signalToDm[:,1])):
         signalToDm[:,1][i] = signalToDm[:,1][i] - min_val
@@ -175,14 +184,26 @@ for q in range(1,len(np.unique(clusters))):
     #splitting into chunks
     split_param = 7 #parameter to determine splitting of cluster for analysis
     dummy = np.array_split(signalToDm,split_param)
+    dummy2 = np.array_split(scaled_signal,split_param) #sharpness
     
     meanSN = []
     meanDM = []
+
+    s_meanSN = []
+    s_meanDM = []
     for i in range(len(dummy)):
         tempSN = np.mean(dummy[i][:,1])
         tempDM = np.mean(dummy[i][:,0])
         meanSN.append(tempSN)
         meanDM.append(tempDM)
+        #testing sharpness
+        s_tempSN = np.mean(dummy2[i][:,1])
+        s_tempDM = np.mean(dummy2[i][:,0])
+        s_meanSN.append(s_tempSN)
+        s_meanDM.append(s_tempDM)
+    
+    max_val = max(meanSN + min_val)
+    
     
     #Condition for location of peak S/N
     max_ind = np.argmax(meanSN)
@@ -191,48 +212,86 @@ for q in range(1,len(np.unique(clusters))):
             if (clusters[i] == q - 1):
                 clusters[i] = -1
     
-    #developing peak shape conditions
+       #developing peak shape conditions
     else:
         weight_1 = 1/3
         weight_2 = 2/3
+        weight_3 = -0.1
         check_1 = 0.075
         check_2 = 0.15
-        score = [3,2,1,1]
+        score = [1,2,1.5,1.5]
         rating = 0
-        for i in range(max_ind - 1, -1, -1):
-            ratio=meanSN[i]/meanSN[i+1]
-            
-            if ((ratio>=(1-check_1)) and (ratio<=1)):
-                rating += weight_1*score[max_ind-(i+1)]
-            elif ((ratio>=(1-check_2)) and (ratio<=1)):
-                rating += weight_2*score[max_ind-(i+1)]
-            elif ratio <=1:
-                rating += score[max_ind-(i+1)]
-                
-        for i in range((max_ind+1),split_param):
-            ratio=meanSN[i]/meanSN[i-1]
-            
-            if ((ratio>=(1-check_1)) and (ratio<=1)):
-                rating += weight_1*score[i-max_ind-1]
-            elif ((ratio>=(1-check_2)) and (ratio<=1)):
-                rating += weight_2*score[i-max_ind-1]
-            elif ratio <=1:
-                rating += score[i-max_ind-1]
-        confidence = rating/12
+    
+    sub_arr1 = meanDM[0:max_ind + 1]
+    sub_arr2 = meanDM[max_ind:len(meanDM)]
+    
+    diffs1 = [abs(e[1] - e[0]) for e in itertools.permutations(sub_arr1, 2)]
+    diffs2 = [abs(e[1] - e[0]) for e in itertools.permutations(sub_arr2, 2)]
+    
+    avg_diff1 = sum(diffs1)/len(diffs1)
+    avg_diff2 = sum(diffs2)/len(diffs2)
+    
+    diffDiff = abs(avg_diff1 - avg_diff2)
+    sumDiff = avg_diff1 + avg_diff2
+    diffRatio = diffDiff/sumDiff
+    
+    for i in range(max_ind - 1, -1, -1):
+        ratio=meanSN[i]/meanSN[i+1]
+    
+        if ((ratio>=(1-check_1)) and (ratio<=1)):
+            rating += weight_1*score[max_ind-(i+1)]
+        elif ((ratio>=(1-check_2)) and (ratio<=1)):
+            rating += weight_2*score[max_ind-(i+1)]
+        elif ratio <=1:
+            rating += score[max_ind-(i+1)]
+        else:
+            rating += weight_3*score[max_ind-(i+1)]
+    
+    for i in range((max_ind+1),split_param):
+        ratio=meanSN[i]/meanSN[i-1]
+    
+        if ((ratio>=(1-check_1)) and (ratio<=1)):
+            rating += weight_1*score[i-max_ind-1]
+        elif ((ratio>=(1-check_2)) and (ratio<=1)):
+            rating += weight_2*score[i-max_ind-1]
+        elif ratio <=1:
+            rating += score[i-max_ind-1]
+        else:
+               rating += weight_3*score[i-max_ind-1]
+    confidence = rating/9
+    SN_conf = 0.9828639 + ((-0.9828632502)/(1+((max_val/4.630117)**1.341797)))
+    diff_conf = 0.2 + ((0.46)/(1+((diffRatio/0.5949996)**1450.932)))
+    tot_conf = 0.25*SN_conf + 0.15* diff_conf + 0.60*confidence
+    
+    #sharpness
+    diff_SN = max(s_meanSN) - min(s_meanSN)
+    diff_DM = s_meanDM[-1] - s_meanDM[0] #?????center this around peak
+    sharp_ratio = diff_SN/diff_DM #height/width
+    ratios.append(sharp_ratio)
         
-        xwidth=(min(signalToDm[:,0]) - max(signalToDm[:,0]))/12
+    diffs1 = [abs(e[1] - e[0]) for e in itertools.permutations(sub_arr1, 2)]
+    diffs2 = [abs(e[1] - e[0]) for e in itertools.permutations(sub_arr2, 2)]
         
-        fig = plt.figure()
-        ax1 = fig.add_subplot(111)
-        ax1.bar(meanDM,meanSN, align='center',width=xwidth, alpha=0.2)
-        #plt.show()
-        ax1.set_title(confidence)
-        ax = fig.add_subplot(111)
-        ax.scatter(signalToDm[:,0], signalToDm[:, 1], alpha = 0.4, vmin = -1, s = 10)
-        #ax.plot(x,y)
-        ax.set_xlabel("DM")
-        ax.set_ylabel("S/N")
-        plt.show()    
+    avg_diff1 = sum(diffs1)/len(diffs1)
+    avg_diff2 = sum(diffs2)/len(diffs2)
+        
+    print(round(avg_diff1,1))
+    print(round(avg_diff2,1))
+        
+        
+    xwidth=(min(signalToDm[:,0]) - max(signalToDm[:,0]))/12
+        
+    fig = plt.figure()
+    ax1 = fig.add_subplot(111)
+    ax1.bar(meanDM,meanSN, align='center',width=xwidth, alpha=0.2)
+    #plt.show()
+    ax1.set_title(str(max_val) + "\n" + str(confidence) + "\n" + str(SN_conf) + "\n" + str(tot_conf))
+    ax = fig.add_subplot(111)
+    ax.scatter(signalToDm[:,0], signalToDm[:, 1], alpha = 0.4, vmin = -1, s = 10)
+    #ax.plot(x,y)
+    ax.set_xlabel("DM")
+    ax.set_ylabel("S/N")
+    plt.show()    
         
         
 #Re-order        
@@ -241,6 +300,7 @@ clusterOrder(clusters)
 
 
 
+#y = 0.9812087 + ((-0.981208633)/((x/6.881581)**1.620657)) # S/N conf function
             
 """                
 #Plotting for visualisation of S/N             

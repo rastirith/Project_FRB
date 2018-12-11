@@ -84,12 +84,12 @@ def DF(path):
     Tfile.close()
     return df
 
-
+step = 0.001
 counter = 0
-true_pos = 0
-false_pos = 0
-true_neg = 0
-false_neg = 0
+true_pos = np.zeros(int(1/step))
+false_pos = np.zeros(int(1/step))
+true_neg = np.zeros(int(1/step))
+false_neg = np.zeros(int(1/step))
 
 pos_array = [
         1, 3, 7, 8, 10, 14, 19, 20, 22, 24, 30, 31, 38,
@@ -325,16 +325,18 @@ for i in range(0,72):
                 ax.set_ylabel("S/N")
                 plt.show()"""
             
-            conf_lim = 0.65
+            #conf_lim = 0.65
             
-            if ((tot_conf >= conf_lim) and (counter in pos_array)):
-                true_pos += 1
-            elif ((tot_conf >= conf_lim) and (counter not in pos_array)):
-                false_pos += 1
-            elif ((tot_conf < conf_lim) and (counter not in pos_array)):
-                true_neg += 1
-            elif ((tot_conf < conf_lim) and (counter in pos_array)):
-                false_neg += 1
+            for i in range(len(true_pos)):
+            
+                if ((tot_conf >= i*step) and (counter in pos_array)):
+                    true_pos[i] += 1
+                elif ((tot_conf >= i*step) and (counter not in pos_array)):
+                    false_pos[i] += 1
+                elif ((tot_conf < i*step) and (counter not in pos_array)):
+                    true_neg[i] += 1
+                elif ((tot_conf < i*step) and (counter in pos_array)):
+                    false_neg[i] += 1
             
     #Re-order        
     labels_arr = clusterSort(clusters, points)
@@ -413,14 +415,45 @@ ax3.hist(ratios, bins = 10)
 plt.show()"""
 
 neg_num = counter - len(pos_array)
+x_val = np.arange(0,1,step)
 
-tr_pos = round(100*true_pos/len(pos_array), 1)
-fl_neg = 100 - round(100*true_pos/len(pos_array), 1)
-tr_neg = round(100*true_neg/(counter - len(pos_array)), 1)
-fl_pos = round(100*false_pos/(counter - len(pos_array)), 1)
 
+T_pos=[]
+F_neg=[] 
+T_neg=[] 
+F_pos=[]
+
+for i in range(int(1/step)):   
+    
+    #accuracies?
+    """
+    T_pos[i] = round(100*true_pos[i]/len(pos_array) , 1)
+    F_neg[i] = round(100*false_neg[i]/(len(pos_array)), 1)
+    T_neg[i] = round(100*true_neg[i]/(counter - len(pos_array)), 1)
+    F_pos[i] = round(100*false_pos[i]/(counter - len(pos_array)), 1)"""
+    
+    #rates?
+    T_pos.append(round(100*true_pos[i]/(true_pos[i] + false_neg[i]), 1))
+    F_neg.append(round(100*false_neg[i]/(true_pos[i] + false_neg[i]), 1))
+    T_neg.append(round(100*true_neg[i]/(true_neg[i] + false_pos[i]), 1))
+    F_pos.append(round(100*false_pos[i]/(true_neg[i] + false_pos[i]), 1))
+
+
+
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.plot(x_val, T_pos, color = "g", label = "True positives")
+ax.plot(x_val, F_pos, color = "r", label = "False positives")
+ax.plot(x_val, T_neg, color = "k", label = "True negatives")
+ax.plot(x_val, F_neg, color = "b", label = "False negatives")
+ax.set_title("Classification accuracy")
+ax.set_xlabel("Confidence low-limit")
+ax.set_ylabel("Percentage")
+plt.legend()
+
+"""
 print("True positive: " + str(tr_pos) + "%")
 print("True negative: " + str(tr_neg) + "%")
 print("False positive: " + str(fl_pos) + "%")
-print("False negative: " + str(fl_neg) + "%")
+print("False negative: " + str(fl_neg) + "%")"""
 
