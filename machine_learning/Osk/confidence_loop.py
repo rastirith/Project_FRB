@@ -84,7 +84,7 @@ def DF(path):
     Tfile.close()
     return df
 
-step = 0.01
+step = 0.001
 counter = 0
 true_pos = np.zeros(int(1/step))
 false_pos = np.zeros(int(1/step))
@@ -417,18 +417,35 @@ plt.show()"""
 neg_num = counter - len(pos_array)
 x_val = np.arange(0,1,step)
 
+
+T_pos=[]
+F_neg=[] 
+T_neg=[] 
+F_pos=[]
+
 for i in range(int(1/step)):   
-    true_pos[i] = round(100*true_pos[i]/len(pos_array), 1)
-    false_neg[i] = round(100*false_neg[i]/len(pos_array), 1)
-    true_neg[i] = round(100*true_neg[i]/(counter - len(pos_array)), 1)
-    false_pos[i] = round(100*false_pos[i]/(counter - len(pos_array)), 1)
+    
+    #accuracies?
+    """
+    T_pos[i] = round(100*true_pos[i]/len(pos_array) , 1)
+    F_neg[i] = round(100*false_neg[i]/(len(pos_array)), 1)
+    T_neg[i] = round(100*true_neg[i]/(counter - len(pos_array)), 1)
+    F_pos[i] = round(100*false_pos[i]/(counter - len(pos_array)), 1)"""
+    
+    #rates?
+    T_pos.append(round(100*true_pos[i]/(true_pos[i] + false_neg[i]), 1))
+    F_neg.append(round(100*false_neg[i]/(true_pos[i] + false_neg[i]), 1))
+    T_neg.append(round(100*true_neg[i]/(true_neg[i] + false_pos[i]), 1))
+    F_pos.append(round(100*false_pos[i]/(true_neg[i] + false_pos[i]), 1))
+
+
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
-ax.plot(x_val, true_pos, color = "g", label = "True positives")
-ax.plot(x_val, false_pos, color = "r", label = "False positives")
-ax.plot(x_val, true_neg, color = "k", label = "True negatives")
-ax.plot(x_val, false_neg, color = "b", label = "False negatives")
+ax.plot(x_val, T_pos, color = "g", label = "True positives")
+ax.plot(x_val, F_pos, color = "r", label = "False positives")
+ax.plot(x_val, T_neg, color = "k", label = "True negatives")
+ax.plot(x_val, F_neg, color = "b", label = "False negatives")
 ax.set_title("Classification accuracy")
 ax.set_xlabel("Confidence low-limit")
 ax.set_ylabel("Percentage")
