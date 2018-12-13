@@ -246,9 +246,6 @@ for i in range(0,72):
             max_score = 2*(score[0] + score[1] + score[2])
             rating = 0
             
-            sub_arr1 = meanDM[0:max_ind + 1]
-            sub_arr2 = meanDM[max_ind:len(meanDM)]
-            
             for i in range(max_ind - 1, -1, -1):
                 ratio=meanSN[i]/meanSN[i+1]
             
@@ -272,15 +269,16 @@ for i in range(0,72):
                     rating += weight_3*score[i-max_ind-1]
                 else:
                     rating += weight_4*score[i-max_ind-1]
+            
               
             #sharpness
             diff_SN = max(s_meanSN) - (0.5*s_meanSN[0] + 0.5*s_meanSN[-1])
             diff_DM = s_meanDM[-1] - s_meanDM[0] #?????center this around peak
-            sharp_ratio = diff_SN/diff_DM #height/width
+            sharp_ratio = (7.1*diff_SN)/(3.7*diff_DM + 7.1*diff_SN) #height/width
             ratios.append(sharp_ratio)    
                 
             shape_conf = rating/max_score
-            tot_conf = 0.5*shape_conf + 0.5*sharp_ratio
+            tot_conf = 0.743*shape_conf + 0.257*sharp_ratio
             
             """
             if (tot_conf < 9999999 or tot_conf >= 0):
@@ -397,6 +395,8 @@ T_pos=[]
 F_neg=[] 
 T_neg=[] 
 F_pos=[]
+max_dist = 0
+lim = 0
 
 for i in range(int(1/step)):   
     
@@ -407,23 +407,50 @@ for i in range(int(1/step)):
     T_neg[i] = round(100*true_neg[i]/(counter - len(pos_array)), 1)
     F_pos[i] = round(100*false_pos[i]/(counter - len(pos_array)), 1)"""
     
+    TP = round(100*true_pos[i]/(true_pos[i] + false_neg[i]), 1)
+    FP = round(100*false_pos[i]/(true_neg[i] + false_pos[i]), 1)
+    
     #rates?
     T_pos.append(round(100*true_pos[i]/(true_pos[i] + false_neg[i]), 1))
     F_neg.append(round(100*false_neg[i]/(true_pos[i] + false_neg[i]), 1))
     T_neg.append(round(100*true_neg[i]/(true_neg[i] + false_pos[i]), 1))
     F_pos.append(round(100*false_pos[i]/(true_neg[i] + false_pos[i]), 1))
+    
+    if (TP - FP) > max_dist:
+        max_dist = TP - FP
+        lim = i*step
+        
+print("Max dist: " + str(max_dist))        
 
-
+xTP = list(zip(x_val, T_pos))
+xFN = list(zip(x_val, F_neg))
+xTN = list(zip(x_val, T_neg))
+xFP = list(zip(x_val, F_pos))
+xTPS = preprocessing.MinMaxScaler().fit_transform(xTP)
+xFNS = preprocessing.MinMaxScaler().fit_transform(xFN)
+xTNS = preprocessing.MinMaxScaler().fit_transform(xTN)
+xFPS = preprocessing.MinMaxScaler().fit_transform(xFP)
 
 fig = plt.figure()
 ax = fig.add_subplot(111)
-ax.plot(x_val, T_pos, color = "g", label = "True positives")
-ax.plot(x_val, F_pos, color = "r", label = "False positives")
-ax.plot(x_val, T_neg, color = "k", label = "True negatives")
-ax.plot(x_val, F_neg, color = "b", label = "False negatives")
+ax.plot(xTPS[:,0], xTPS[:,1], color = "g", label = "True positives")
+ax.plot(xFPS[:,0], xFPS[:,1], color = "r", label = "False positives")
+ax.plot(xTNS[:,0], xTNS[:,1], color = "k", label = "True negatives")
+ax.plot(xFNS[:,0], xFNS[:,1], color = "b", label = "False negatives")
 ax.set_title("Classification accuracy")
 ax.set_xlabel("Confidence low-limit")
 ax.set_ylabel("Percentage")
+
+fig2 = plt.figure()
+ax1 = fig2.add_subplot(111)
+ax1.plot(x_val, T_pos, color = "g", label = "True positives")
+ax1.plot(x_val, F_pos, color = "r", label = "False positives")
+ax1.plot(x_val, T_neg, color = "k", label = "True negatives")
+ax1.plot(x_val, F_neg, color = "b", label = "False negatives")
+ax1.set_title("Classification accuracy")
+ax1.set_xlabel("Confidence low-limit")
+ax1.set_ylabel("Percentage")
+
 plt.legend()
 
 """
