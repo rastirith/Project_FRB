@@ -240,7 +240,8 @@ for i in range(0,72):
             weight_2 = -0.3
             weight_3 = 1
             weight_4 = -1
-            check_1 = 0.1
+            check_1 = 0.075
+            check_2 = 0.15
             score = [0,1.3,2.5,2.5]
             max_score = 2*(score[0] + score[1] + score[2])
             rating = 0
@@ -253,6 +254,8 @@ for i in range(0,72):
             
                 if ((ratio>=(1-check_1)) and (ratio<=1)):
                     rating += weight_1*score[max_ind-(i+1)]
+                elif ((ratio>=(1-check_2)) and (ratio<=1)):
+                    rating += weight_2*score[max_ind-(i+1)]
                 elif (ratio<=1):
                     rating += weight_3*score[max_ind-(i+1)]
                 else:
@@ -263,6 +266,8 @@ for i in range(0,72):
 
                 if ((ratio>=(1-check_1)) and (ratio<=1)):
                     rating += weight_1*score[i-max_ind-1]
+                elif ((ratio>=(1-check_2)) and (ratio<=1)):
+                    rating += weight_2*score[i-max_ind-1]
                 elif ratio <=1:
                     rating += weight_3*score[i-max_ind-1]
                 else:
