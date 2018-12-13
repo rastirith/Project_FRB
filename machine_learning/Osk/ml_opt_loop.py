@@ -85,23 +85,28 @@ def DF(path):
     Tfile.close()
     return df
 
-step = 0.001
+step = 0.01
 
-iterations = 200
-iter_arr = np.zeros(200)
+iter_step = 0.1
+iter_1d = int(3/iter_step)
+iterations = int(((3/iter_step) + 1)**3)
+#iter_arr = np.zeros(200)
 score_struct = []
 TP_iter = np.zeros((int(1/step),iterations))
 FP_iter = np.zeros((int(1/step),iterations))
 TN_iter = np.zeros((int(1/step),iterations))
 FN_iter = np.zeros((int(1/step),iterations))
 
-for i in range(iterations):
-    a = random.uniform(0,3)
-    b = random.uniform(0,3)
-    c = random.uniform(0,3)
-    #d = random.uniform(0,3)
-    score_struct.append([a,b,c,c])
-    
+for i in range(iter_1d + 1):
+    a = i*iter_step
+    for k in range(1, iter_1d + 1):
+        b = k*iter_step
+        for m in range(1, iter_1d + 1):
+            c = m*iter_step
+            score_struct.append([a,b,c,c])
+
+score_struct = np.array(score_struct)
+
 
 counter = 0
 true_pos = np.zeros(int(1/step))
@@ -160,7 +165,7 @@ for i in range(0,72):
     xeps = 0.025    # Radius of circle to look around for additional core points
     xmin = 2        # Number of points within xeps for the point to count as core point
     
-    clusters = DBSCAN(eps=xeps, min_samples = xmin, n_jobs = -1).fit_predict(X_scaled)  
+    clusters = DBSCAN(eps=xeps, min_samples = xmin).fit_predict(X_scaled)  
     #plt.scatter(X_scaled[:, 1], X_scaled[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 15)
     
     # Re-inserts bottom points with labels -1 for RFI
@@ -254,14 +259,14 @@ for i in range(0,72):
         else:
             counter += 1
             
-            for h in range(iterations):
+            for h in range(len(score_struct)):
+                #progressBar(h,len(score_struct))
                     
-                weight_1 = 1/2
-                weight_2 = 3/4
-                weight_3 = -0.1
-                check_1 = 0.075
-                check_2 = 0.15
-                check_3 = 0.25
+                weight_1 = -1
+                weight_2 = -0.3
+                weight_3 = 1
+                weight_4 = -1
+                check_1 = 0.1
                 score = score_struct[h]
                 max_score = 2*(score[0] + score[1] + score[2])
                 rating = 0
@@ -273,29 +278,21 @@ for i in range(0,72):
                     ratio=meanSN[i]/meanSN[i+1]
                 
                     if ((ratio>=(1-check_1)) and (ratio<=1)):
-                        rating += 0
-                    elif ((ratio>=(1-check_2)) and (ratio<=1)):
                         rating += weight_1*score[max_ind-(i+1)]
-                    elif ((ratio>=(1-check_3)) and (ratio<=1)):
-                        rating += weight_2*score[max_ind-(i+1)]
                     elif (ratio<=1):
-                        rating += score[max_ind-(i+1)]
-                    else:
                         rating += weight_3*score[max_ind-(i+1)]
+                    else:
+                        rating += weight_4*score[max_ind-(i+1)]
     
                 for i in range((max_ind+1),split_param):
                     ratio=meanSN[i]/meanSN[i-1]
     
                     if ((ratio>=(1-check_1)) and (ratio<=1)):
-                        rating += 0
-                    elif ((ratio>=(1-check_2)) and (ratio<=1)):
                         rating += weight_1*score[i-max_ind-1]
-                    elif ((ratio>=(1-check_3)) and (ratio<=1)):
-                        rating += weight_2*score[i-max_ind-1]
                     elif ratio <=1:
-                        rating += score[i-max_ind-1]
-                    else:
                         rating += weight_3*score[i-max_ind-1]
+                    else:
+                        rating += weight_4*score[i-max_ind-1]
                   
                 #sharpness
                 diff_SN = max(s_meanSN) - (0.5*s_meanSN[0] + 0.5*s_meanSN[-1])
@@ -305,8 +302,9 @@ for i in range(0,72):
                     
                 shape_conf = rating/max_score
                 tot_conf = 0.5*shape_conf + 0.5*sharp_ratio
-                
-                for i in range(len(true_pos)):
+                #int(0.5*len(true_pos)),int(0.8*len(true_pos))
+                #len(true_pos)
+                for i in range(int(0.3*len(true_pos)),int(0.9*len(true_pos))):
                 
                     if ((tot_conf >= i*step) and (counter in pos_array)):
                         true_pos[i] += 1
@@ -339,27 +337,36 @@ xFP = np.zeros((int(1/step),iterations))
 
 for i in range(len(TP_iter)):
     for h in range(iterations):
-        xTP[i][h] = 100*TP_iter[i][h]/(TP_iter[i][h] + FN_iter[i][h])
-        xFN[i][h] = 100*FN_iter[i][h]/(TP_iter[i][h] + FN_iter[i][h])
-        xTN[i][h] = 100*TN_iter[i][h]/(TN_iter[i][h] + FP_iter[i][h])
-        xFP[i][h] = 100*FP_iter[i][h]/(TN_iter[i][h] + FP_iter[i][h])       
         
+        if (TP_iter[i][h] + FN_iter[i][h]) != 0:
+            xTP[i][h] = 100*TP_iter[i][h]/(TP_iter[i][h] + FN_iter[i][h])
+            xFN[i][h] = 100*FN_iter[i][h]/(TP_iter[i][h] + FN_iter[i][h])
+        if (TN_iter[i][h] + FP_iter[i][h]) != 0:
+            xTN[i][h] = 100*TN_iter[i][h]/(TN_iter[i][h] + FP_iter[i][h])
+            xFP[i][h] = 100*FP_iter[i][h]/(TN_iter[i][h] + FP_iter[i][h])       
 
-max_diff = 0
 conf_setting = 0
-score_setting = 0
-
-for i in range(len(TP_iter)):
-    for h in range(iterations):
-        diff = xTP[i][h] - xFP[i][h]
-        if (diff > max_diff):
-            max_diff = diff
-            conf_setting = i
-            score_setting = h
-            
+score_setting = 0  
+max_avg = 0   
+for h in range(iterations):
+    dist_avg = 0
+    for i in range(len(TP_iter)):
+        dist_avg += (xTP[i][h] - xFP[i][h])/(len(TP_iter))
+    if (dist_avg  > max_avg):
+        max_avg = dist_avg
+        score_setting = h
+        print(h)
+        print(dist_avg)
+        print(score_struct[h])
+    
+dist = 0   
+for i in range (len(TP_iter)):       
+    if ((xTP[i][score_setting] - xFP[i][score_setting]) > dist):
+        dist = (xTP[i][h] - xFP[i][h])
+        conf_setting = i
 
 print("Low limit: " + str(100*conf_setting*step) + "%")
-print("Score setting: " + str(score_struct[h]))
+print("Score setting: " + str(score_struct[score_setting]))
 
 
 
@@ -374,43 +381,13 @@ for i in range(len(TP_iter)):
 
 
 
-
+"""
 for i in range(int(1/step)):   
-    
-    #accuracies?
-    """
-    T_pos[i] = round(100*true_pos[i]/len(pos_array) , 1)
-    F_neg[i] = round(100*false_neg[i]/(len(pos_array)), 1)
-    T_neg[i] = round(100*true_neg[i]/(counter - len(pos_array)), 1)
-    F_pos[i] = round(100*false_pos[i]/(counter - len(pos_array)), 1)"""
     
     #rates?
     T_pos.append(round(100*true_pos[i]/(true_pos[i] + false_neg[i]), 1))
     F_neg.append(round(100*false_neg[i]/(true_pos[i] + false_neg[i]), 1))
     T_neg.append(round(100*true_neg[i]/(true_neg[i] + false_pos[i]), 1))
-    F_pos.append(round(100*false_pos[i]/(true_neg[i] + false_pos[i]), 1))
+    F_pos.append(round(100*false_pos[i]/(true_neg[i] + false_pos[i]), 1))"""
 
-
-"""
-fig = plt.figure()
-ax = fig.add_subplot(111)
-ax.plot(x_val, T_pos, color = "g", label = "True positives")
-ax.plot(x_val, F_pos, color = "r", label = "False positives")
-ax.plot(x_val, T_neg, color = "k", label = "True negatives")
-ax.plot(x_val, F_neg, color = "b", label = "False negatives")
-ax.set_title("Classification accuracy")
-ax.set_xlabel("Confidence low-limit")
-ax.set_ylabel("Percentage")
-plt.legend()"""
-
-
-
-
-
-
-"""
-print("True positive: " + str(tr_pos) + "%")
-print("True negative: " + str(tr_neg) + "%")
-print("False positive: " + str(fl_pos) + "%")
-print("False negative: " + str(fl_neg) + "%")"""
 
