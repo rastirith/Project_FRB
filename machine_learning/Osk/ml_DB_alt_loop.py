@@ -108,10 +108,22 @@ for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
     
 ratios = []
 
+conf_D = []
+conf_C = []
+conf_B = []
+conf_A = []
+
+
 for i in range(0,72): 
     print(i)
     para = 0
     path=i
+    
+    conf_A.append(0)
+    conf_B.append(0)
+    conf_C.append(0)
+    conf_D.append(0)
+    
     #setting which file to open
     FILE = source_paths[path]
     #getting df for test file
@@ -305,8 +317,20 @@ for i in range(0,72):
             avg_diff2 = sum(diffs2)/len(diffs2)
                 
             xwidth=(min(signalToDm[:,0]) - max(signalToDm[:,0]))/12
-            """
-            if (tot_conf < 9999999 or tot_conf >= 0):
+            
+            if (tot_conf < 0.578):
+                conf_D[-1] += 1
+            elif ((tot_conf >= 0.578) and (tot_conf < 0.66)):
+                conf_C[-1] += 1
+            elif ((tot_conf >= 0.66) and (tot_conf < 0.786)):
+                conf_B[-1] += 1
+            else:
+                conf_A[-1] += 1
+            
+                
+                
+                
+                """
                 para = 1
             
                 fig = plt.figure()
@@ -411,16 +435,36 @@ fig2 = plt.figure()
 ax3 = fig2.add_subplot(111)
 ax3.hist(ratios, bins = 10)
 plt.show()"""
-
+"""
 neg_num = counter - len(pos_array)
 
 tr_pos = round(100*true_pos/len(pos_array), 1)
 fl_neg = 100 - round(100*true_pos/len(pos_array), 1)
 tr_neg = round(100*true_neg/(counter - len(pos_array)), 1)
-fl_pos = round(100*false_pos/(counter - len(pos_array)), 1)
+fl_pos = round(100*false_pos/(counter - len(pos_array)), 1)"""
 
+bot_D = []
+bot_C = []
+bot_B = []
+bot_A = []
+
+for i in range(len(conf_A)):
+    bot_D.append(0)
+    bot_C.append(conf_D[i])
+    bot_B.append(conf_C[i] + conf_D[i])
+    bot_A.append(conf_B[i] + conf_C[i] + conf_D[i])
+
+x_val = np.arange(0,len(conf_A),1)
+fig = plt.figure()
+ax1 = fig.add_subplot(111)
+ax1.bar(x_val, conf_D, bottom = bot_D, label = "Rejected")
+ax1.bar(x_val, conf_C, bottom = bot_C, label = "Least acceptable")
+ax1.bar(x_val, conf_B, bottom = bot_B, label = "Good")
+ax1.bar(x_val, conf_A, bottom = bot_A, label = "Excellent")
+plt.legend()
+
+"""
 print("True positive: " + str(tr_pos) + "%")
 print("True negative: " + str(tr_neg) + "%")
 print("False positive: " + str(fl_pos) + "%")
-print("False negative: " + str(fl_neg) + "%")
-
+print("False negative: " + str(fl_neg) + "%")"""
