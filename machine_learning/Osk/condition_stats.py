@@ -62,7 +62,9 @@ def ROWFORM(cluster_list,column_variable,array):
 source_paths = []
 
 #DataFrame utility
-df2_labels=['File_Path','DBclusters','Noiseclusters','DMlimitclusters','SNPclusters','SNRclusters','NRFIclusters','REJECTED','FAIRclusters','GOODclusters','EXCELclusters','bin1','bin2','bin3','bin4','bin5','bin6','bin7','bin8','bin9','bin10']
+
+df2_labels=['File_Path','DBSCAN','Noise','DMlimit','Peak location','Shape & Sharpness','NRFIclusters','REJECTED','Fair','Good','Excellent','bin1','bin2','bin3','bin4','bin5','bin6','bin7','bin8','bin9','bin10']
+
 df2 = pd.DataFrame(columns=df2_labels)
 #df2_data = [] #store a row of data per file to append to DF2 
 #print(df2.head())
@@ -73,7 +75,7 @@ for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
 
 #ratios = []
    
-for i in range(0,73): 
+for i in range(0,72): 
     #Variables for counting
     #step 1
     DBclusters = 0
@@ -241,17 +243,21 @@ for i in range(0,73):
         
         #developing peak shape conditions
         else:
-            weight_1 = 1/2
-            weight_2 = 3/4
-            weight_3 = -0.1
+
+            weight_1 = -1
+            weight_2 = -0.3
+            weight_3 = 1
+            weight_4 = -1
             check_1 = 0.075
             check_2 = 0.15
-            check_3 = 0.25
-            score = [1,1.5,1.25,1.25]
+            score = [0,1.3,2.5,2.5]
+            max_score = 2*(score[0] + score[1] + score[2])
+
             rating = 0
             #bins left side of peak
             for i in range(max_ind - 1, -1, -1):
                 ratio=meanSN[i]/meanSN[i+1]
+
                 if ((ratio>=(1-check_1)) and (ratio<=1)):
                     rating += 0
                 elif ((ratio>=(1-check_2)) and (ratio<=1)):
@@ -259,12 +265,14 @@ for i in range(0,73):
                 elif ((ratio>=(1-check_3)) and (ratio<=1)):
                     rating += weight_2*score[max_ind-(i+1)]
                 elif (ratio<=1):
-                    rating += score[max_ind-(i+1)]
-                else:
+
                     rating += weight_3*score[max_ind-(i+1)]
+                else:
+                    rating += weight_4*score[max_ind-(i+1)]
             #bins right side of peak
             for i in range((max_ind+1),split_param):
                 ratio=meanSN[i]/meanSN[i-1]
+
                 if ((ratio>=(1-check_1)) and (ratio<=1)):
                     rating += 0
                 elif ((ratio>=(1-check_2)) and (ratio<=1)):
@@ -272,24 +280,28 @@ for i in range(0,73):
                 elif ((ratio>=(1-check_3)) and (ratio<=1)):
                     rating += weight_2*score[i-max_ind-1]
                 elif ratio <=1:
-                    rating += score[i-max_ind-1]
-                else:
                     rating += weight_3*score[i-max_ind-1]
-              
+
+                else:
+                    rating += weight_4*score[i-max_ind-1]
+            
+            if rating <0:
+                rating =0
+            
             #sharpness
             diff_SN = max(s_meanSN) - (0.5*s_meanSN[0] + 0.5*s_meanSN[-1])
             diff_DM = s_meanDM[-1] - s_meanDM[0] #?????center this around peak
-            sharp_ratio = diff_SN/diff_DM #height/width
+            sharp_ratio = diff_SN/(diff_SN+diff_DM) #height/width
             #ratios.append(sharp_ratio)    
             
             #confidence value
-            shape_conf = rating/7.5
-            tot_conf = 0.5*shape_conf + 0.5*sharp_ratio
+            shape_conf = rating/max_score
+            tot_conf = 0.743*shape_conf + 0.257*sharp_ratio
 
             #confidence conditions
-            conf_lim0 = 0.578 #<=fair
-            conf_lim1 = 0.660 #<=good
-            conf_lim2 = 0.786 #<=excellent
+            conf_lim0 = 0.114 #<=fair
+            conf_lim1 = 0.344 #<=good
+            conf_lim2 = 0.849 #<=excellent
     
             if tot_conf<conf_lim0:
                 REJECTED+=1
@@ -347,5 +359,7 @@ for i in range(0,73):
 
 #plt.hist(ratios,bins=10)
 #Writing to file
-df2.to_csv('condition_stats_8',index=False)
+
+df2.to_csv('condition_stats_14',index=False)
+
 
