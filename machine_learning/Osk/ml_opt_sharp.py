@@ -11,6 +11,7 @@ import scipy.cluster.hierarchy as hcluster
 import sys
 import warnings
 import itertools
+import random
 
 warnings.filterwarnings("ignore",category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore",category=RuntimeWarning)
@@ -84,7 +85,33 @@ def DF(path):
     Tfile.close()
     return df
 
-step = 0.001
+step = 0.01
+
+sharp_step = 0.1
+sharp_range = 10
+sharpsteps_1d = int(sharp_range/sharp_step)
+sharp_iterations = int((sharpsteps_1d + 1)**2)
+
+
+
+
+#iter_arr = np.zeros(200)
+sharp_struct = []
+TP_iter = np.zeros((int(1/step), sharp_iterations))
+FP_iter = np.zeros((int(1/step), sharp_iterations))
+TN_iter = np.zeros((int(1/step), sharp_iterations))
+FN_iter = np.zeros((int(1/step), sharp_iterations))
+
+for i in range(int(sharpsteps_1d + 1)):
+    a = i*sharp_step
+    print(a)
+    for k in range(int(sharpsteps_1d + 1)):
+        b = k*sharp_step
+        sharp_struct.append([a,b])
+
+sharp_struct = np.array(sharp_struct)
+
+
 counter = 0
 true_pos = np.zeros(int(1/step))
 false_pos = np.zeros(int(1/step))
@@ -109,7 +136,7 @@ for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
 ratios = []
 
 for i in range(0,72): 
-    print(i)
+    print("\n" + str(i))
     para = 0
     path=i
     #setting which file to open
@@ -141,7 +168,7 @@ for i in range(0,72):
     
     xeps = 0.025    # Radius of circle to look around for additional core points
     xmin = 2        # Number of points within xeps for the point to count as core point
-
+    
     clusters = DBSCAN(eps=xeps, min_samples = xmin).fit_predict(X_scaled)  
     #plt.scatter(X_scaled[:, 1], X_scaled[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 15)
     
@@ -189,8 +216,9 @@ for i in range(0,72):
     
     # Condition for peak location
     # Condition for peak location
+    clustcount = len(np.unique(clusters))
     for q in range(1,len(np.unique(clusters))):
-    
+        
         signalToDm = list(zip(labels_arr[q][:,0], labels_arr[q][:,2]))
         signalToDm = np.array(signalToDm)
         min_val = min(signalToDm[:,1])
@@ -236,226 +264,107 @@ for i in range(0,72):
         else:
             counter += 1
             
-            weight_1 = -1
-            weight_2 = -0.3
-            weight_3 = 1
-            weight_4 = -1
-            check_1 = 0.075
-            check_2 = 0.15
-            score = [0,1.3,2.5,2.5]
-            max_score = 2*(score[0] + score[1] + score[2])
-            rating = 0
-            
-            for i in range(max_ind - 1, -1, -1):
-                ratio=meanSN[i]/meanSN[i+1]
-            
-                if ((ratio>=(1-check_1)) and (ratio<=1)):
-                    rating += weight_1*score[max_ind-(i+1)]
-                elif ((ratio>=(1-check_2)) and (ratio<=1)):
-                    rating += weight_2*score[max_ind-(i+1)]
-                elif (ratio<=1):
-                    rating += weight_3*score[max_ind-(i+1)]
-                else:
-                    rating += weight_4*score[max_ind-(i+1)]
-
-            for i in range((max_ind+1),split_param):
-                ratio=meanSN[i]/meanSN[i-1]
-
-                if ((ratio>=(1-check_1)) and (ratio<=1)):
-                    rating += weight_1*score[i-max_ind-1]
-                elif ((ratio>=(1-check_2)) and (ratio<=1)):
-                    rating += weight_2*score[i-max_ind-1]
-                elif ratio <=1:
-                    rating += weight_3*score[i-max_ind-1]
-                else:
-                    rating += weight_4*score[i-max_ind-1]
-            
-              
-            #sharpness
-            diff_SN = max(s_meanSN) - (0.5*s_meanSN[0] + 0.5*s_meanSN[-1])
-            diff_DM = s_meanDM[-1] - s_meanDM[0] #?????center this around peak
-            sharp_ratio = (7.1*diff_SN)/(3.7*diff_DM + 7.1*diff_SN) #height/width
-            ratios.append(sharp_ratio)    
+            for h in range(len(sharp_struct)):
+                #progressBar(h,len(score_struct))
                 
-            shape_conf = rating/max_score
-            tot_conf = 0.743*shape_conf + 0.257*sharp_ratio
-            
-            """
-            if (tot_conf < 9999999 or tot_conf >= 0):
-                para = 1
-            
-                fig = plt.figure()
-                ax1 = fig.add_subplot(111)
-                ax1.bar(meanDM,meanSN, align='center',width=xwidth, alpha=0.2)
+                SnWeight = sharp_struct[h][0]
+                DmWeight = sharp_struct[h][1]
+                rating = 0
                 
-                props = dict(boxstyle='round', facecolor='wheat', alpha=0.3)
-                textstr = "Shape: " + str(round(shape_conf,2)) + "\nSharp: " + str(round(sharp_ratio,2)) + "\nTot: " + str(round(tot_conf,2)) + "\nCount: " + str(counter)
-                ax1.text(0.05, 0.95, textstr, transform=ax1.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+                sub_arr1 = meanDM[0:max_ind + 1]
+                sub_arr2 = meanDM[max_ind:len(meanDM)]
+                  
+                #sharpness
+                diff_SN = max(s_meanSN) - (0.5*s_meanSN[0] + 0.5*s_meanSN[-1])
+                diff_DM = s_meanDM[-1] - s_meanDM[0] #?????center this around peak
+                sharp_ratio = (SnWeight*diff_SN)/((DmWeight*diff_DM) + (SnWeight*diff_SN))#height/width
+                ratios.append(sharp_ratio)    
+                tot_conf = sharp_ratio
+                #int(0.5*len(true_pos)),int(0.8*len(true_pos))
+                for i in range(len(true_pos)):
                 
-                ax1.set_title("besh")
-                ax = fig.add_subplot(111)
-                ax.scatter(signalToDm[:,0], signalToDm[:, 1], alpha = 0.4, vmin = -1, s = 10)
-
-                ax.set_xlabel("DM")
-                ax.set_ylabel("S/N")
-                plt.show()"""
-            
-            for i in range(len(true_pos)):
-            
-                if ((tot_conf >= i*step) and (counter in pos_array)):
-                    true_pos[i] += 1
-                elif ((tot_conf >= i*step) and (counter not in pos_array)):
-                    false_pos[i] += 1
-                elif ((tot_conf < i*step) and (counter not in pos_array)):
-                    true_neg[i] += 1
-                elif ((tot_conf < i*step) and (counter in pos_array)):
-                    false_neg[i] += 1
+                    if ((tot_conf >= i*step) and (counter in pos_array)):
+                        true_pos[i] += 1
+                        TP_iter[i][h] += 1
+                    elif ((tot_conf >= i*step) and (counter not in pos_array)):
+                        false_pos[i] += 1
+                        FP_iter[i][h] += 1
+                    elif ((tot_conf < i*step) and (counter not in pos_array)):
+                        true_neg[i] += 1
+                        TN_iter[i][h] += 1
+                    elif ((tot_conf < i*step) and (counter in pos_array)):
+                        false_neg[i] += 1
+                        FN_iter[i][h] += 1
+                        
+            progressBar(q, clustcount)
             
     #Re-order        
     labels_arr = clusterSort(clusters, points)
-    clusterOrder(clusters)                
-    
-    
-    
-    """
-    if para == 1:
-        
-        fig = plt.figure()
-        ax1 = fig.add_subplot(111)
-        ax1.scatter(points[:, 1], points[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 10)"""
-    
-    
-    
-    """
-        signal_scaled = preprocessing.StandardScaler().fit_transform(signalToDm)
-        #print(signal_scaled)
-        
-        #y=0
-        for i in range(len(signal_scaled[:,1])):
-            signal_scaled[:,1][i] = signal_scaled[:,1][i] - min(signal_scaled[:,1])
-         
-        max_val = max(signal_scaled[:,1])
-        print(signal_scaled)
-        mu = 0
-        variance = 1
-        sigma = math.sqrt(variance)
-        x = np.linspace(mu - 3*sigma, mu + 3*sigma, 1001)
-        y = mlab.normpdf(x, mu, sigma)
-        for i in range(len(y)):
-            y[i] = y[i]*2*max_val
-            
-        sum = 0
-        for i in range(len(signal_scaled[:,1])):
-            temp_dm = signal_scaled[:,0][i] - min(signal_scaled[:,0])
-            frac = temp_dm/(max(signal_scaled[:,0]) - min(signal_scaled[:,0]))
-            y_temp = y[int(round(frac*1000))]
-            
-            term = ((signal_scaled[:,1][i] - y_temp)**2)/y_temp
-            sum += term
-        
-        red_chi = sum/len(signal_scaled[:,1])
-        print(red_chi)
-    """   
-    
-    """
-    time_diff = 0.05
-    for q in range(1,len(np.unique(clusters))):
-        quantile_diff = np.quantile(labels_arr[q][:,1], 0.75) - np.quantile(labels_arr[q][:,1], 0.25)
-        if (quantile_diff > time_diff):
-            for i in range(len(clusters)):
-                if (clusters[i] == q - 1):
-                    clusters[i] = -1"""
-    
-    #fig = plt.figure()
-    #ax = fig.add_subplot(111,projection = '3d')
-    #ax = fig.add_subplot(111)
-    #ax.scatter(points[:, 1], points[:, 0], zs, c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 10)
-    #ax.scatter(points[:, 1], points[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 10)
-    """
-    print("Dm limit 2: " + str(dm_lim))
-    print("Old array length: " + str(len(points)))
-    print("New array length: " + str(len(points_new)))"""
-    
-    #plt.xlabel("Time")
-    #plt.ylabel("DM")
-    #plt.title(source_paths[path])
-    
-    #plt.show()
-"""
-fig2 = plt.figure()
-ax3 = fig2.add_subplot(111)
-ax3.hist(ratios, bins = 10)
-plt.show()"""
+    clusterOrder(clusters)                  
 
-neg_num = counter - len(pos_array)
 x_val = np.arange(0,1,step)
-
 
 T_pos=[]
 F_neg=[] 
 T_neg=[] 
 F_pos=[]
-max_dist = 0
-lim = 0
 
+xTP = np.zeros((int(1/step),sharp_iterations))
+xFN = np.zeros((int(1/step),sharp_iterations))
+xTN = np.zeros((int(1/step),sharp_iterations))
+xFP = np.zeros((int(1/step),sharp_iterations))
+
+for i in range(len(TP_iter)):
+    for h in range(sharp_iterations):
+        
+        if (TP_iter[i][h] + FN_iter[i][h]) != 0:
+            xTP[i][h] = 100*TP_iter[i][h]/(TP_iter[i][h] + FN_iter[i][h])
+            xFN[i][h] = 100*FN_iter[i][h]/(TP_iter[i][h] + FN_iter[i][h])
+        if (TN_iter[i][h] + FP_iter[i][h]) != 0:
+            xTN[i][h] = 100*TN_iter[i][h]/(TN_iter[i][h] + FP_iter[i][h])
+            xFP[i][h] = 100*FP_iter[i][h]/(TN_iter[i][h] + FP_iter[i][h])       
+
+sharp_setting = 0  
+max_avg = 0   
+for h in range(sharp_iterations):
+    dist_avg = 0
+    for i in range(len(TP_iter)):
+        dist_avg += (xTP[i][h] - xFP[i][h])/(len(TP_iter))
+    if (dist_avg  > max_avg):
+        max_avg = dist_avg
+        sharp_setting = h
+        #print(h)
+        #print(dist_avg)
+        #print(sharp_struct[h])
+"""   
+dist = 0   
+for i in range (len(TP_iter)):       
+    if ((xTP[i][sharp_setting] - xFP[i][sharp_setting]) > dist):
+        dist = (xTP[i][h] - xFP[i][h])
+        conf_setting = i"""
+
+print("Score setting: " + str(sharp_struct[sharp_setting]))
+
+
+
+"""    
+for i in range(len(TP_iter)):
+    for h in range(score_iterations):
+        xTP.append(round(100*TP_iter[i][h]/(TP_iter[i][h] + FN_iter[i][h]), 1))
+        xFN.append(round(100*FN_iter[i][h]/(TP_iter[i][h] + FN_iter[i][h]), 1))
+        xTN.append(round(100*TN_iter[i][h]/(TN_iter[i][h] + FP_iter[i][h]), 1))
+        xFP.append(round(100*FP_iter[i]/(TN_iter[i][h] + FP_iter[i][h]), 1))"""
+
+
+
+
+"""
 for i in range(int(1/step)):   
-    
-    #accuracies?
-    """
-    T_pos[i] = round(100*true_pos[i]/len(pos_array) , 1)
-    F_neg[i] = round(100*false_neg[i]/(len(pos_array)), 1)
-    T_neg[i] = round(100*true_neg[i]/(counter - len(pos_array)), 1)
-    F_pos[i] = round(100*false_pos[i]/(counter - len(pos_array)), 1)"""
-    
-    TP = round(100*true_pos[i]/(true_pos[i] + false_neg[i]), 1)
-    FP = round(100*false_pos[i]/(true_neg[i] + false_pos[i]), 1)
     
     #rates?
     T_pos.append(round(100*true_pos[i]/(true_pos[i] + false_neg[i]), 1))
     F_neg.append(round(100*false_neg[i]/(true_pos[i] + false_neg[i]), 1))
     T_neg.append(round(100*true_neg[i]/(true_neg[i] + false_pos[i]), 1))
-    F_pos.append(round(100*false_pos[i]/(true_neg[i] + false_pos[i]), 1))
-    
-    if (TP - FP) > max_dist:
-        max_dist = TP - FP
-        lim = i*step
-        
-print("Max dist: " + str(max_dist))        
+    F_pos.append(round(100*false_pos[i]/(true_neg[i] + false_pos[i]), 1))"""
 
-xTP = list(zip(x_val, T_pos))
-xFN = list(zip(x_val, F_neg))
-xTN = list(zip(x_val, T_neg))
-xFP = list(zip(x_val, F_pos))
-xTPS = preprocessing.MinMaxScaler().fit_transform(xTP)
-xFNS = preprocessing.MinMaxScaler().fit_transform(xFN)
-xTNS = preprocessing.MinMaxScaler().fit_transform(xTN)
-xFPS = preprocessing.MinMaxScaler().fit_transform(xFP)
-
-fig = plt.figure()
-ax = fig.add_subplot(111)
-ax.plot(xTPS[:,0], xTPS[:,1], color = "g", label = "True positives")
-ax.plot(xFPS[:,0], xFPS[:,1], color = "r", label = "False positives")
-ax.plot(xTNS[:,0], xTNS[:,1], color = "k", label = "True negatives")
-ax.plot(xFNS[:,0], xFNS[:,1], color = "b", label = "False negatives")
-ax.set_title("Classification accuracy")
-ax.set_xlabel("Confidence low-limit")
-ax.set_ylabel("Percentage")
-
-fig2 = plt.figure()
-ax1 = fig2.add_subplot(111)
-ax1.plot(x_val, T_pos, color = "g", label = "True positives")
-ax1.plot(x_val, F_pos, color = "r", label = "False positives")
-ax1.plot(x_val, T_neg, color = "k", label = "True negatives")
-ax1.plot(x_val, F_neg, color = "b", label = "False negatives")
-ax1.set_title("Classification accuracy")
-ax1.set_xlabel("Confidence low-limit")
-ax1.set_ylabel("Percentage")
-
-plt.legend()
-
-"""
-print("True positive: " + str(tr_pos) + "%")
-print("True negative: " + str(tr_neg) + "%")
-print("False positive: " + str(fl_pos) + "%")
-print("False negative: " + str(fl_neg) + "%")"""
 
