@@ -62,7 +62,9 @@ def ROWFORM(cluster_list,column_variable,array):
 source_paths = []
 
 #DataFrame utility
+
 df2_labels=['File_Path','DBSCAN','Noise','DMlimit','Peak location','Shape & Sharpness','NRFIclusters','REJECTED','Fair','Good','Excellent','bin1','bin2','bin3','bin4','bin5','bin6','bin7','bin8','bin9','bin10']
+
 df2 = pd.DataFrame(columns=df2_labels)
 #df2_data = [] #store a row of data per file to append to DF2 
 #print(df2.head())
@@ -241,6 +243,7 @@ for i in range(0,72):
         
         #developing peak shape conditions
         else:
+
             weight_1 = -1
             weight_2 = -0.3
             weight_3 = 1
@@ -249,16 +252,20 @@ for i in range(0,72):
             check_2 = 0.15
             score = [0,1.3,2.5,2.5]
             max_score = 2*(score[0] + score[1] + score[2])
+
             rating = 0
             #bins left side of peak
             for i in range(max_ind - 1, -1, -1):
                 ratio=meanSN[i]/meanSN[i+1]
-            
+
                 if ((ratio>=(1-check_1)) and (ratio<=1)):
-                    rating += weight_1*score[max_ind-(i+1)]
+                    rating += 0
                 elif ((ratio>=(1-check_2)) and (ratio<=1)):
+                    rating += weight_1*score[max_ind-(i+1)]
+                elif ((ratio>=(1-check_3)) and (ratio<=1)):
                     rating += weight_2*score[max_ind-(i+1)]
                 elif (ratio<=1):
+
                     rating += weight_3*score[max_ind-(i+1)]
                 else:
                     rating += weight_4*score[max_ind-(i+1)]
@@ -267,11 +274,14 @@ for i in range(0,72):
                 ratio=meanSN[i]/meanSN[i-1]
 
                 if ((ratio>=(1-check_1)) and (ratio<=1)):
-                    rating += weight_1*score[i-max_ind-1]
+                    rating += 0
                 elif ((ratio>=(1-check_2)) and (ratio<=1)):
+                    rating += weight_1*score[i-max_ind-1]
+                elif ((ratio>=(1-check_3)) and (ratio<=1)):
                     rating += weight_2*score[i-max_ind-1]
                 elif ratio <=1:
                     rating += weight_3*score[i-max_ind-1]
+
                 else:
                     rating += weight_4*score[i-max_ind-1]
             
@@ -349,5 +359,7 @@ for i in range(0,72):
 
 #plt.hist(ratios,bins=10)
 #Writing to file
+
 df2.to_csv('condition_stats_14',index=False)
+
 

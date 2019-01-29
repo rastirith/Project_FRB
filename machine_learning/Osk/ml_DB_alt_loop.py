@@ -113,8 +113,20 @@ conf_C = []
 conf_B = []
 conf_A = []
 
+chris = [None]*4
+oskar = [None]*4
+chris_shape = [None]*2
+oskar_shape = [None]*2
+oskar_sharp = [None]*2
+oskar_tot = [None]*2
+chris_meanDM = [None]*2
+chris_meanSN = [None]*2
+oskar_meanDM = [None]*2
+oskar_meanSN = [None]*2
+chris_width = [None]*2
+oskar_width = [None]*2
 
-for i in range(0,72): 
+for i in range(0,20): 
     print(i)
     para = 0
     path=i
@@ -148,6 +160,21 @@ for i in range(0,72):
             
            
     points_new = np.array(points_new)
+    if path == 2: 
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        ax.scatter(points[:, 1], points[:, 2], c = "b", cmap="Paired", alpha = 0.4, vmin = -1, s = 10, label = "Detected events")
+        
+        ax.set_xlim(left = 0)
+        ax.set_ylim(bottom = 0)
+        plt.xlabel("DM (pc $cm^-3$)")
+        plt.ylabel("S/N")
+        #plt.title(path)
+        plt.title("S/N-DM plot of candidate")
+        ax.legend(markerscale=2.5)
+        
+        plt.show()
+    
     
     X_scaled = preprocessing.MinMaxScaler().fit_transform(points_new) #Rescales the data so that the x- and y-axes get ratio 1:1
     
@@ -199,6 +226,12 @@ for i in range(0,72):
     labels_arr = clusterSort(clusters, points)
     clusterOrder(clusters)
     
+    rejected = []
+    least_acc = []
+    good = []
+    excellent = []
+    rfi = []
+    
     # Condition for peak location
     # Condition for peak location
     for q in range(1,len(np.unique(clusters))):
@@ -248,6 +281,16 @@ for i in range(0,72):
         else:
             counter += 1
             
+            weight_1 = -1
+            weight_2 = -0.3
+            weight_3 = 1
+            weight_4 = -1
+            check_1 = 0.075
+            check_2 = 0.15
+            score = [0,1.3,2.5,2.5]
+            max_score = 2*(score[0] + score[1] + score[2])
+            
+            """
             weight_1 = 1/2
             weight_2 = 3/4
             weight_3 = -0.1
@@ -255,102 +298,119 @@ for i in range(0,72):
             check_2 = 0.15
             check_3 = 0.25
             score = [1,1.5,1.25,1.25]
+            max_score = 2*(score[0] + score[1] + score[2])"""
             rating = 0
-        
-            sub_arr1 = meanDM[0:max_ind + 1]
-            sub_arr2 = meanDM[max_ind:len(meanDM)]
-            
-            diffs1 = [abs(e[1] - e[0]) for e in itertools.permutations(sub_arr1, 2)]
-            diffs2 = [abs(e[1] - e[0]) for e in itertools.permutations(sub_arr2, 2)]
-            
-            avg_diff1 = sum(diffs1)/len(diffs1)
-            avg_diff2 = sum(diffs2)/len(diffs2)
-            
-            diffDiff = abs(avg_diff1 - avg_diff2)
-            sumDiff = avg_diff1 + avg_diff2
-            diffRatio = diffDiff/sumDiff
             
             for i in range(max_ind - 1, -1, -1):
                 ratio=meanSN[i]/meanSN[i+1]
             
                 if ((ratio>=(1-check_1)) and (ratio<=1)):
-                    rating += 0
-                elif ((ratio>=(1-check_2)) and (ratio<=1)):
                     rating += weight_1*score[max_ind-(i+1)]
-                elif ((ratio>=(1-check_3)) and (ratio<=1)):
+                elif ((ratio>=(1-check_2)) and (ratio<=1)):
                     rating += weight_2*score[max_ind-(i+1)]
                 elif (ratio<=1):
-                    rating += score[max_ind-(i+1)]
-                else:
                     rating += weight_3*score[max_ind-(i+1)]
+                else:
+                    rating += weight_4*score[max_ind-(i+1)]
 
             for i in range((max_ind+1),split_param):
                 ratio=meanSN[i]/meanSN[i-1]
 
                 if ((ratio>=(1-check_1)) and (ratio<=1)):
-                    rating += 0
-                elif ((ratio>=(1-check_2)) and (ratio<=1)):
                     rating += weight_1*score[i-max_ind-1]
-                elif ((ratio>=(1-check_3)) and (ratio<=1)):
+                elif ((ratio>=(1-check_2)) and (ratio<=1)):
                     rating += weight_2*score[i-max_ind-1]
                 elif ratio <=1:
-                    rating += score[i-max_ind-1]
-                else:
                     rating += weight_3*score[i-max_ind-1]
-              
+                else:
+                    rating += weight_4*score[i-max_ind-1]
             #sharpness
+            if rating < 0:
+                rating = 0
             diff_SN = max(s_meanSN) - (0.5*s_meanSN[0] + 0.5*s_meanSN[-1])
             diff_DM = s_meanDM[-1] - s_meanDM[0] #?????center this around peak
-            sharp_ratio = diff_SN/diff_DM #height/width
+            sharp_ratio = diff_SN/(diff_SN + diff_DM) #height/width
             ratios.append(sharp_ratio)    
                 
-            shape_conf = rating/7.5
-            SN_conf = 0.9828639 + ((-0.9828632502)/(1+((max_val/4.630117)**1.341797)))
-            #diff_conf = 0.2 + ((0.46)/(1+((diffRatio/0.5949996)**1450.932)))
-            tot_conf = 0.5*shape_conf + 0.5*sharp_ratio
+            shape_conf = rating/max_score
+            tot_conf = 0.743*shape_conf + 0.257*sharp_ratio
             
-                
-            diffs1 = [abs(e[1] - e[0]) for e in itertools.permutations(sub_arr1, 2)]
-            diffs2 = [abs(e[1] - e[0]) for e in itertools.permutations(sub_arr2, 2)]
-                
-            avg_diff1 = sum(diffs1)/len(diffs1)
-            avg_diff2 = sum(diffs2)/len(diffs2)
-                
-            xwidth=(min(signalToDm[:,0]) - max(signalToDm[:,0]))/12
             
-            if (tot_conf < 0.578):
+            least_lim = 0.114
+            good_lim = 0.344
+            exc_lim = 0.849
+            
+            if (tot_conf < least_lim):
                 conf_D[-1] += 1
-            elif ((tot_conf >= 0.578) and (tot_conf < 0.66)):
+                for m in labels_arr[q]:
+                    rejected.append(m)
+            elif ((tot_conf >= least_lim) and (tot_conf < good_lim)):
                 conf_C[-1] += 1
-            elif ((tot_conf >= 0.66) and (tot_conf < 0.786)):
+                for m in labels_arr[q]:
+                    least_acc.append(m)
+            elif ((tot_conf >= good_lim) and (tot_conf < exc_lim)):
                 conf_B[-1] += 1
+                for m in labels_arr[q]:
+                    good.append(m)
             else:
                 conf_A[-1] += 1
+                for m in labels_arr[q]:
+                    excellent.append(m)
+                    
+            xwidth=(min(signalToDm[:,0]) - max(signalToDm[:,0]))/12
+                
+            if counter == 1:
+                oskar[0] = signalToDm[:,0]
+                oskar[1] = signalToDm[:,1]
+                oskar_meanSN[0] = meanSN
+                oskar_meanDM[0] = meanDM
+                oskar_shape[0] = round(shape_conf,2)
+                oskar_sharp[0] = round(sharp_ratio,2)
+                oskar_tot[0] = round(tot_conf,2)
+                oskar_width[0] = xwidth
+            elif counter == 22:
+                chris[0] = signalToDm[:,0]
+                chris[1] = signalToDm[:,1]
+                chris_meanDM[0] = meanDM
+                chris_meanSN[0] = meanSN
+                chris_shape[0] = round(shape_conf,2)
+                chris_width[0] = xwidth
+            elif counter == 41:
+                chris[2] = signalToDm[:,0]
+                chris[3] = signalToDm[:,1]
+                chris_meanDM[1] = meanDM
+                chris_meanSN[1] = meanSN
+                chris_shape[1] = round(shape_conf,2)
+                chris_width[1] = xwidth
+                oskar[2] = signalToDm[:,0]
+                oskar[3] = signalToDm[:,1]
+                oskar_meanDM[1] = meanDM
+                oskar_meanSN[1] = meanSN
+                oskar_shape[1] = round(shape_conf,2)
+                oskar_sharp[1] = round(sharp_ratio,2)
+                oskar_tot[1] = round(tot_conf,2)
+                oskar_width[1] = xwidth
+                
+            """    
+            xwidth=(min(signalToDm[:,0]) - max(signalToDm[:,0]))/12
+        
+            fig = plt.figure()
+            ax1 = fig.add_subplot(111)
+            ax1.bar(meanDM,meanSN, align='center',width=xwidth, alpha=0.2)
             
-                
-                
-                
-                """
-                para = 1
+            props = dict(boxstyle='round', facecolor='wheat', alpha=0.3)
+            textstr = "Shape: " + str(round(shape_conf,2)) + "\nSharp: " + str(round(sharp_ratio,2)) + "\nTot: " + str(round(tot_conf,2)) + "\nCount: " + str(counter)
+            ax1.text(0.05, 0.95, textstr, transform=ax1.transAxes, fontsize=14, verticalalignment='top', bbox=props)
             
-                fig = plt.figure()
-                ax1 = fig.add_subplot(111)
-                ax1.bar(meanDM,meanSN, align='center',width=xwidth, alpha=0.2)
-                
-                props = dict(boxstyle='round', facecolor='wheat', alpha=0.3)
-                textstr = "Shape: " + str(round(shape_conf,2)) + "\nSharp: " + str(round(sharp_ratio,2)) + "\nTot: " + str(round(tot_conf,2)) + "\nCount: " + str(counter)
-                ax1.text(0.05, 0.95, textstr, transform=ax1.transAxes, fontsize=14, verticalalignment='top', bbox=props)
-                
-                ax1.set_title("besh")
-                ax = fig.add_subplot(111)
-                ax.scatter(signalToDm[:,0], signalToDm[:, 1], alpha = 0.4, vmin = -1, s = 10)
+            ax1.set_title("besh")
+            ax = fig.add_subplot(111)
+            ax.scatter(signalToDm[:,0], signalToDm[:, 1], alpha = 0.4, vmin = -1, s = 10)
 
-                ax.set_xlabel("DM")
-                ax.set_ylabel("S/N")
-                plt.show()"""
+            ax.set_xlabel("DM")
+            ax.set_ylabel("S/N")
+            plt.show()"""
             
-            conf_lim = 0.65
-            
+            """
             if ((tot_conf >= conf_lim) and (counter in pos_array)):
                 true_pos += 1
             elif ((tot_conf >= conf_lim) and (counter not in pos_array)):
@@ -358,7 +418,7 @@ for i in range(0,72):
             elif ((tot_conf < conf_lim) and (counter not in pos_array)):
                 true_neg += 1
             elif ((tot_conf < conf_lim) and (counter in pos_array)):
-                false_neg += 1
+                false_neg += 1"""
             
     #Re-order        
     labels_arr = clusterSort(clusters, points)
@@ -414,22 +474,37 @@ for i in range(0,72):
             for i in range(len(clusters)):
                 if (clusters[i] == q - 1):
                     clusters[i] = -1"""
+                    
+    labs = ["one", "two", "three", "four", "five"]
+    for m in labels_arr[0]:
+        rfi.append(m)
     
-    #fig = plt.figure()
+    """fig = plt.figure()
     #ax = fig.add_subplot(111,projection = '3d')
-    #ax = fig.add_subplot(111)
+    ax = fig.add_subplot(111)
+    #print(rejected)
     #ax.scatter(points[:, 1], points[:, 0], zs, c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 10)
-    #ax.scatter(points[:, 1], points[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 10)
-    """
-    print("Dm limit 2: " + str(dm_lim))
-    print("Old array length: " + str(len(points)))
-    print("New array length: " + str(len(points_new)))"""
     
-    #plt.xlabel("Time")
-    #plt.ylabel("DM")
-    #plt.title(source_paths[path])
+    rejected = np.array(rejected)
+    least_acc = np.array(least_acc)
+    good = np.array(good)
+    excellent = np.array(excellent)
+    rfi = np.array(rfi)
     
-    #plt.show()
+    ax.scatter(excellent[:,1], excellent[:,0], c = "r", alpha = 1, vmin = -1, s = 10, label = "Excellent")
+    ax.scatter(good[:,1], good[:,0], c = "m", alpha = 1, vmin = -1, s = 10, label = "Good")
+    ax.scatter(least_acc[:,1], least_acc[:,0], c = "b", alpha = 1, vmin = -1, s = 10, label = "Least Acceptable")
+    ax.scatter(rejected[:,1], rejected[:,0], c = "k", alpha = 1, vmin = -1, s = 10, label = "Rejected")
+    ax.scatter(rfi[:,1], rfi[:,0], color = "0.7", alpha = 1, vmin = -1, s = 10, label = "RFI/Background")
+    
+    ax.set_xlim(left = 0)
+    ax.set_ylim(bottom = 0)
+    plt.xlabel("Time (s)")
+    plt.ylabel("DM (pc $cm^-3$)")
+    plt.title("DM-time plot with algorithm classifications")
+    ax.legend(markerscale=2.5)
+    
+    plt.show()"""
 """
 fig2 = plt.figure()
 ax3 = fig2.add_subplot(111)
@@ -442,6 +517,47 @@ tr_pos = round(100*true_pos/len(pos_array), 1)
 fl_neg = 100 - round(100*true_pos/len(pos_array), 1)
 tr_neg = round(100*true_neg/(counter - len(pos_array)), 1)
 fl_pos = round(100*false_pos/(counter - len(pos_array)), 1)"""
+        
+oskar = np.array(oskar)
+chris = np.array(chris)
+chris_meanDM = np.array(chris_meanDM)
+chris_meanSN = np.array(chris_meanSN)
+oskar_meanDM = np.array(oskar_meanDM)
+oskar_meanSN = np.array(oskar_meanSN)
+
+fig = plt.figure()
+ax1 = fig.add_subplot(211)
+ax1.bar(oskar_meanDM[0],oskar_meanSN[0], align='center',width=oskar_width[0], alpha=0.2)
+
+props = dict(boxstyle='round', facecolor='wheat', alpha=0.3)
+textstr = "Shape score: " + str(round(oskar_shape[0],2)) + "\n" + "Sharpness score: " + str(round(oskar_sharp[0],2)) + "\n" + "Total score: " + str(round(oskar_tot[0],2))
+
+ax1.text(0.02, 0.95, textstr, transform=ax1.transAxes, fontsize=9, verticalalignment='top', bbox=props)
+
+ax1.set_title("Shape score example")
+ax = fig.add_subplot(211)
+ax.scatter(oskar[0], oskar[1], vmin = -1, s = 10, label ="Data points")
+
+#ax.set_xlabel("DM (pc $cm^-3$)")
+ax.set_ylabel("S/N")
+ax.legend()
+
+ax2 = fig.add_subplot(212)
+ax2.bar(oskar_meanDM[1],oskar_meanSN[1], align='center',width=oskar_width[1], alpha=0.2)
+
+props = dict(boxstyle='round', facecolor='wheat', alpha=0.3)
+textstr1 = "Shape score: " + str(round(oskar_shape[1],2)) + "\n" + "Sharpness score: " + str(round(oskar_sharp[1],2)) + "\n" + "Total score: " + str(round(oskar_tot[1],2))
+ax2.text(0.02, -0.91, textstr1, transform=ax1.transAxes, fontsize=9, verticalalignment='top', bbox=props)
+
+ax3 = fig.add_subplot(212)
+ax3.scatter(oskar[2], oskar[3], vmin = -1, s = 10, label = "Data points")
+
+ax3.set_xlabel("DM (pc $cm^-3$)")
+ax3.set_ylabel("S/N")
+#fig.tight_layout()
+plt.show()
+
+
 
 bot_D = []
 bot_C = []
