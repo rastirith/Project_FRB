@@ -126,7 +126,7 @@ oskar_meanSN = [None]*2
 chris_width = [None]*2
 oskar_width = [None]*2
 
-for i in range(0,20): 
+for i in range(0,5): 
     print(i)
     para = 0
     path=i
