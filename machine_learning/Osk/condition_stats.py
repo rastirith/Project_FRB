@@ -136,8 +136,8 @@ for i in range(0,72):
     
     X_scaled = preprocessing.MinMaxScaler().fit_transform(points_new) #Rescales the data so that the x- and y-axes get ratio 1:1
     
-    xeps = 0.025    # Radius of circle to look around for additional core points
-    xmin = 2        # Number of points within xeps for the point to count as core point
+    xeps = 0.02    # Radius of circle to look around for additional core points
+    xmin = 5      # Number of points within xeps for the point to count as core point
     
     clusters = DBSCAN(eps=xeps, min_samples = xmin, n_jobs = -1).fit_predict(X_scaled)   
     #plt.scatter(X_scaled[:, 1], X_scaled[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 15)
@@ -257,31 +257,25 @@ for i in range(0,72):
             #bins left side of peak
             for i in range(max_ind - 1, -1, -1):
                 ratio=meanSN[i]/meanSN[i+1]
-
+            
                 if ((ratio>=(1-check_1)) and (ratio<=1)):
-                    rating += 0
-                elif ((ratio>=(1-check_2)) and (ratio<=1)):
                     rating += weight_1*score[max_ind-(i+1)]
-                elif ((ratio>=(1-check_3)) and (ratio<=1)):
+                elif ((ratio>=(1-check_2)) and (ratio<=1)):
                     rating += weight_2*score[max_ind-(i+1)]
                 elif (ratio<=1):
-
                     rating += weight_3*score[max_ind-(i+1)]
                 else:
                     rating += weight_4*score[max_ind-(i+1)]
-            #bins right side of peak
+            #bins right side
             for i in range((max_ind+1),split_param):
                 ratio=meanSN[i]/meanSN[i-1]
 
                 if ((ratio>=(1-check_1)) and (ratio<=1)):
-                    rating += 0
-                elif ((ratio>=(1-check_2)) and (ratio<=1)):
                     rating += weight_1*score[i-max_ind-1]
-                elif ((ratio>=(1-check_3)) and (ratio<=1)):
+                elif ((ratio>=(1-check_2)) and (ratio<=1)):
                     rating += weight_2*score[i-max_ind-1]
                 elif ratio <=1:
                     rating += weight_3*score[i-max_ind-1]
-
                 else:
                     rating += weight_4*score[i-max_ind-1]
             
@@ -360,6 +354,6 @@ for i in range(0,72):
 #plt.hist(ratios,bins=10)
 #Writing to file
 
-df2.to_csv('condition_stats_14',index=False)
+df2.to_csv('condition_stats_22',index=False)
 
 
