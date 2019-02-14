@@ -11,6 +11,8 @@ import scipy.cluster.hierarchy as hcluster
 import sys
 import warnings
 import itertools
+from scipy.stats import skew, kurtosis
+import math
 
 warnings.filterwarnings("ignore",category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore",category=RuntimeWarning)
@@ -85,6 +87,39 @@ def DF(path):
     return df
 
 
+def ks_cordes(dmArr,snArr,timeArr,peakDmMean,freq = 0.334,bandWidth = 64):
+    cordes = []
+    peakSN = max(snArr)
+    snFreqArr = []
+    cordesFreqArr = []
+    
+    Wms = np.percentile(timeArr,75)-np.percentile(timeArr,25)
+    Wms = Wms*1000
+    dmScaled = dmArr - peakDmMean
+    snRatios = snArr/peakSN
+    
+    x = np.linspace(min(dmScaled),max(dmScaled),2000)
+    zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*x
+    
+    for i in range(len(x)):
+        cordes.append((math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i]))
+
+    
+    for i in range(len(snRatios)):
+        temp_arr = []
+        frequency = int(snRatios[i]*1000)              # Needs to be an integer, timed it by 1000 to reduce rounding errors, proportions still same
+        temp_arr = [dmScaled[i]] * frequency   # Creates the corresponding number of elements and adds it to the array
+        snFreqArr.extend(temp_arr)
+    
+    for i in range(len(cordes)):
+        temp_arr = []
+        frequency = int(cordes[i]*1000)
+        temp_arr = [x[i]] * frequency
+        cordesFreqArr.extend(temp_arr)
+
+    statistic = stats.ks_2samp(snFreqArr,cordesFreqArr)
+    return statistic[0]
+
 counter = 0
 true_pos = 0
 false_pos = 0
@@ -120,33 +155,19 @@ for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
     
 ratios = []
 
-conf_D = []
-conf_C = []
-conf_B = []
-conf_A = []
+shape_vals = []
+sharp_vals = []
+skew_vals = []
+kurt_vals = []
+kstest_vals = []
+class_vals = []
+cand_paths = []
 
-chris = [None]*4
-oskar = [None]*4
-chris_shape = [None]*2
-oskar_shape = [None]*2
-oskar_sharp = [None]*2
-oskar_tot = [None]*2
-chris_meanDM = [None]*2
-chris_meanSN = [None]*2
-oskar_meanDM = [None]*2
-oskar_meanSN = [None]*2
-chris_width = [None]*2
-oskar_width = [None]*2
 
-for i in range(0,72): 
+for i in range(0,5): 
     print(i)
     para = 0
     path=i
-    
-    conf_A.append(0)
-    conf_B.append(0)
-    conf_C.append(0)
-    conf_D.append(0)
     
     #setting which file to open
     FILE = source_paths[path]
@@ -171,7 +192,8 @@ for i in range(0,72):
             points_new.append(points_db[i])
             
            
-    points_new = np.array(points_new)   
+    points_new = np.array(points_new)
+    
     
     X_scaled = preprocessing.MinMaxScaler().fit_transform(points_new) #Rescales the data so that the x- and y-axes get ratio 1:1
     
@@ -238,7 +260,7 @@ for i in range(0,72):
         min_val = min(signalToDm[:,1])
         #sharpness
         scaled_signal = preprocessing.MinMaxScaler().fit_transform(signalToDm)
-        
+
         #y=0 for visualisation
         for i in range(len(signalToDm[:,1])):
             signalToDm[:,1][i] = signalToDm[:,1][i] - min_val
@@ -267,7 +289,7 @@ for i in range(0,72):
         max_val = max(meanSN + min_val)
         
         
-        #Condition for location of peak S/N
+        # Condition for location of peak S/N
         max_ind = np.argmax(meanSN)
         peakMeanDm = meanDM[max_ind]
         if (max_ind > 4) or (max_ind < 2):
@@ -275,10 +297,10 @@ for i in range(0,72):
                 if (clusters[i] == q - 1):
                     clusters[i] = -1
         
-           #developing peak shape conditions
+        # Developing peak shape conditions
         else:
-            print(peakMeanDm)
             counter += 1
+            freq_arr = []
             
             weight_1 = -1
             weight_2 = -0.3
@@ -289,15 +311,6 @@ for i in range(0,72):
             score = [0,1.3,2.5,2.5]
             max_score = 2*(score[0] + score[1] + score[2])
             
-            """
-            weight_1 = 1/2
-            weight_2 = 3/4
-            weight_3 = -0.1
-            check_1 = 0.075
-            check_2 = 0.15
-            check_3 = 0.25
-            score = [1,1.5,1.25,1.25]
-            max_score = 2*(score[0] + score[1] + score[2])"""
             rating = 0
             
             for i in range(max_ind - 1, -1, -1):
@@ -326,6 +339,17 @@ for i in range(0,72):
             #sharpness
             if rating < 0:
                 rating = 0
+            
+            # Converts the S/N-DM plot into a probability frequency plot
+            # Instead of each point in DM space having a corresponding S/N y-value
+            # there will be an array containing a number of DM elements proportional to its S/N value
+            for i in range(len(signalToDm)):
+                temp_arr = []
+                frequency = int(signalToDm[i][1]*1000)      # Needs to be an integer, timed it by 1000 to reduce rounding errors, proportions still same
+                temp_arr = [signalToDm[i][0]] * frequency   # Creates the corresponding number of elements and adds it to the array
+                freq_arr.extend(temp_arr)
+            
+            
             diff_SN = max(s_meanSN) - (0.5*s_meanSN[0] + 0.5*s_meanSN[-1])
             diff_DM = s_meanDM[-1] - s_meanDM[0] #?????center this around peak
             sharp_ratio = diff_SN/(diff_SN + diff_DM) #height/width
@@ -334,258 +358,36 @@ for i in range(0,72):
             shape_conf = rating/max_score
             tot_conf = 0.743*shape_conf + 0.257*sharp_ratio
             
+            skewness = skew(freq_arr, axis = 0)
+            kurt = kurtosis(freq_arr, axis = 0, fisher = True)
             
+            freq_scaled = preprocessing.scale(freq_arr)
+            ks_stat = ks_cordes(signalToDm[:,0],signalToDm[:,1],labels_arr[q][:,1],meanDM[max_ind])
             
-            least_lim = 0.114
-            good_lim = 0.344
-            exc_lim = 0.849
+            shape_vals.append(shape_conf)
+            sharp_vals.append(sharp_ratio)
+            skew_vals.append(skewness)
+            kurt_vals.append(kurt)
+            kstest_vals.append(ks_stat)
+            cand_paths.append(FILE)
             
-            if (tot_conf < least_lim):
-                conf_D[-1] += 1
-                for m in labels_arr[q]:
-                    rejected.append(m)
-            elif ((tot_conf >= least_lim) and (tot_conf < good_lim)):
-                conf_C[-1] += 1
-                for m in labels_arr[q]:
-                    least_acc.append(m)
-            elif ((tot_conf >= good_lim) and (tot_conf < exc_lim)):
-                conf_B[-1] += 1
-                for m in labels_arr[q]:
-                    good.append(m)
+            if (counter in pos_array):
+                class_vals.append(1)
             else:
-                conf_A[-1] += 1
-                for m in labels_arr[q]:
-                    excellent.append(m)
-                    
-            xwidth=(min(signalToDm[:,0]) - max(signalToDm[:,0]))/12
-                
-            if counter == 1:
-                oskar[0] = signalToDm[:,0]
-                oskar[1] = signalToDm[:,1]
-                oskar_meanSN[0] = meanSN
-                oskar_meanDM[0] = meanDM
-                oskar_shape[0] = round(shape_conf,2)
-                oskar_sharp[0] = round(sharp_ratio,2)
-                oskar_tot[0] = round(tot_conf,2)
-                oskar_width[0] = xwidth
-            elif counter == 22:
-                chris[0] = signalToDm[:,0]
-                chris[1] = signalToDm[:,1]
-                chris_meanDM[0] = meanDM
-                chris_meanSN[0] = meanSN
-                chris_shape[0] = round(shape_conf,2)
-                chris_width[0] = xwidth
-            elif counter == 41:
-                chris[2] = signalToDm[:,0]
-                chris[3] = signalToDm[:,1]
-                chris_meanDM[1] = meanDM
-                chris_meanSN[1] = meanSN
-                chris_shape[1] = round(shape_conf,2)
-                chris_width[1] = xwidth
-                oskar[2] = signalToDm[:,0]
-                oskar[3] = signalToDm[:,1]
-                oskar_meanDM[1] = meanDM
-                oskar_meanSN[1] = meanSN
-                oskar_shape[1] = round(shape_conf,2)
-                oskar_sharp[1] = round(sharp_ratio,2)
-                oskar_tot[1] = round(tot_conf,2)
-                oskar_width[1] = xwidth
-                
-            """
-            fig = plt.figure()
-            ax1 = fig.add_subplot(111)
-            ax1.bar(meanDM,meanSN, align='center',width=xwidth, alpha=0.2)
-            
-            props = dict(boxstyle='round', facecolor='wheat', alpha=0.3)
-            numtext = "Num: " + str(counter)
-            textstr = "Shape: " + str(round(shape_conf,2)) + "\nSharp: " + str(round(sharp_ratio,2)) + "\nTot: " + str(round(tot_conf,2)) + "\nCount: " + str(counter)
-            ax1.text(0.05, 0.95, numtext, transform=ax1.transAxes, fontsize=14, verticalalignment='top', bbox=props)
-            
-            ax1.set_title("besh")
-            ax = fig.add_subplot(111)
-            ax.scatter(signalToDm[:,0], signalToDm[:,1], alpha = 0.4, vmin = -1, s = 10)
-
-            ax.set_xlabel("DM")
-            ax.set_ylabel("S/N")
-            plt.show()"""
-            
-            """
-            if ((tot_conf >= conf_lim) and (counter in pos_array)):
-                true_pos += 1
-            elif ((tot_conf >= conf_lim) and (counter not in pos_array)):
-                false_pos += 1
-            elif ((tot_conf < conf_lim) and (counter not in pos_array)):
-                true_neg += 1
-            elif ((tot_conf < conf_lim) and (counter in pos_array)):
-                false_neg += 1"""
+                class_vals.append(0)
+  
             
     #Re-order        
     labels_arr = clusterSort(clusters, points)
-    clusterOrder(clusters)                
+    clusterOrder(clusters)
+
+dataframe = pd.DataFrame({'Shape Feature': shape_vals,
+                          'Sharp Feature': sharp_vals,
+                          'Skewness': skew_vals,
+                          'Kurtosis': kurt_vals,
+                          'KS-test stat': kstest_vals,
+                          'Label': class_vals,
+                          'Candidate paths: ': cand_paths})
+
+dataframe.to_csv("feature_table.csv")           
     
-    
-    
-    """
-    if para == 1:
-        
-        fig = plt.figure()
-        ax1 = fig.add_subplot(111)
-        ax1.scatter(points[:, 1], points[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 10)"""
-    
-    
-    
-    """
-        signal_scaled = preprocessing.StandardScaler().fit_transform(signalToDm)
-        #print(signal_scaled)
-        
-        #y=0
-        for i in range(len(signal_scaled[:,1])):
-            signal_scaled[:,1][i] = signal_scaled[:,1][i] - min(signal_scaled[:,1])
-         
-        max_val = max(signal_scaled[:,1])
-        print(signal_scaled)
-        mu = 0
-        variance = 1
-        sigma = math.sqrt(variance)
-        x = np.linspace(mu - 3*sigma, mu + 3*sigma, 1001)
-        y = mlab.normpdf(x, mu, sigma)
-        for i in range(len(y)):
-            y[i] = y[i]*2*max_val
-            
-        sum = 0
-        for i in range(len(signal_scaled[:,1])):
-            temp_dm = signal_scaled[:,0][i] - min(signal_scaled[:,0])
-            frac = temp_dm/(max(signal_scaled[:,0]) - min(signal_scaled[:,0]))
-            y_temp = y[int(round(frac*1000))]
-            
-            term = ((signal_scaled[:,1][i] - y_temp)**2)/y_temp
-            sum += term
-        
-        red_chi = sum/len(signal_scaled[:,1])
-        print(red_chi)
-    """   
-    
-    """
-    time_diff = 0.05
-    for q in range(1,len(np.unique(clusters))):
-        quantile_diff = np.quantile(labels_arr[q][:,1], 0.75) - np.quantile(labels_arr[q][:,1], 0.25)
-        if (quantile_diff > time_diff):
-            for i in range(len(clusters)):
-                if (clusters[i] == q - 1):
-                    clusters[i] = -1"""
-                    
-    labs = ["one", "two", "three", "four", "five"]
-    for m in labels_arr[0]:
-        rfi.append(m)
-    
-    fig = plt.figure()
-    #ax = fig.add_subplot(111,projection = '3d')
-    ax = fig.add_subplot(111)
-    #print(rejected)
-    #ax.scatter(points[:, 1], points[:, 0], zs, c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 10)
-    
-    rejected = np.array(rejected)
-    least_acc = np.array(least_acc)
-    good = np.array(good)
-    excellent = np.array(excellent)
-    rfi = np.array(rfi)
-    
-    if (len(excellent) > 0):
-        ax.scatter(excellent[:,1], excellent[:,0], c = "r", alpha = 1, vmin = -1, s = 10, label = "Excellent")
-    if (len(good) > 0):
-        ax.scatter(good[:,1], good[:,0], c = "m", alpha = 1, vmin = -1, s = 10, label = "Good")
-    if (len(least_acc) > 0):
-        ax.scatter(least_acc[:,1], least_acc[:,0], c = "b", alpha = 1, vmin = -1, s = 10, label = "Least Acceptable")
-    if (len(rejected) > 0):
-        ax.scatter(rejected[:,1], rejected[:,0], c = "k", alpha = 1, vmin = -1, s = 10, label = "Rejected")
-    if (len(rfi) > 0):
-        ax.scatter(rfi[:,1], rfi[:,0], color = "0.7", alpha = 1, vmin = -1, s = 10, label = "RFI/Background")
-    
-    print(rfi)
-    ax.set_xlim(left = 0)
-    ax.set_ylim(bottom = 0)
-    plt.xlabel("Time (s)")
-    plt.ylabel("DM (pc $cm^-3$)")
-    plt.title("DM-time plot with algorithm classifications")
-    ax.legend(markerscale=2.5)
-    
-    plt.show()
-"""
-fig2 = plt.figure()
-ax3 = fig2.add_subplot(111)
-ax3.hist(ratios, bins = 10)
-plt.show()"""
-"""
-neg_num = counter - len(pos_array)
-
-tr_pos = round(100*true_pos/len(pos_array), 1)
-fl_neg = 100 - round(100*true_pos/len(pos_array), 1)
-tr_neg = round(100*true_neg/(counter - len(pos_array)), 1)
-fl_pos = round(100*false_pos/(counter - len(pos_array)), 1)"""
-
-oskar = np.array(oskar)
-chris = np.array(chris)
-chris_meanDM = np.array(chris_meanDM)
-chris_meanSN = np.array(chris_meanSN)
-oskar_meanDM = np.array(oskar_meanDM)
-oskar_meanSN = np.array(oskar_meanSN)
-"""
-fig = plt.figure()
-ax1 = fig.add_subplot(211)
-ax1.bar(oskar_meanDM[0],oskar_meanSN[0], align='center',width=oskar_width[0], alpha=0.2)
-
-props = dict(boxstyle='round', facecolor='wheat', alpha=0.3)
-textstr = "Shape score: " + str(round(oskar_shape[0],2)) + "\n" + "Sharpness score: " + str(round(oskar_sharp[0],2)) + "\n" + "Total score: " + str(round(oskar_tot[0],2))
-
-ax1.text(0.02, 0.95, textstr, transform=ax1.transAxes, fontsize=9, verticalalignment='top', bbox=props)
-
-ax1.set_title("Shape score example")
-ax = fig.add_subplot(211)
-ax.scatter(oskar[0], oskar[1], vmin = -1, s = 10, label ="Data points")
-
-#ax.set_xlabel("DM (pc $cm^-3$)")
-ax.set_ylabel("S/N")
-ax.legend()
-
-ax2 = fig.add_subplot(212)
-ax2.bar(oskar_meanDM[1],oskar_meanSN[1], align='center',width=oskar_width[1], alpha=0.2)
-
-props = dict(boxstyle='round', facecolor='wheat', alpha=0.3)
-textstr1 = "Shape score: " + str(round(oskar_shape[1],2)) + "\n" + "Sharpness score: " + str(round(oskar_sharp[1],2)) + "\n" + "Total score: " + str(round(oskar_tot[1],2))
-ax2.text(0.02, -0.91, textstr1, transform=ax1.transAxes, fontsize=9, verticalalignment='top', bbox=props)
-
-ax3 = fig.add_subplot(212)
-ax3.scatter(oskar[2], oskar[3], vmin = -1, s = 10, label = "Data points")
-
-ax3.set_xlabel("DM (pc $cm^-3$)")
-ax3.set_ylabel("S/N")
-#fig.tight_layout()
-plt.show()"""
-
-
-"""
-bot_D = []
-bot_C = []
-bot_B = []
-bot_A = []
-
-for i in range(len(conf_A)):
-    bot_D.append(0)
-    bot_C.append(conf_D[i])
-    bot_B.append(conf_C[i] + conf_D[i])
-    bot_A.append(conf_B[i] + conf_C[i] + conf_D[i])
-
-x_val = np.arange(0,len(conf_A),1)
-fig = plt.figure()
-ax1 = fig.add_subplot(111)
-ax1.bar(x_val, conf_D, bottom = bot_D, label = "Rejected")
-ax1.bar(x_val, conf_C, bottom = bot_C, label = "Least acceptable")
-ax1.bar(x_val, conf_B, bottom = bot_B, label = "Good")
-ax1.bar(x_val, conf_A, bottom = bot_A, label = "Excellent")
-plt.legend()"""
-
-"""
-print("True positive: " + str(tr_pos) + "%")
-print("True negative: " + str(tr_neg) + "%")
-print("False positive: " + str(fl_pos) + "%")
-print("False negative: " + str(fl_neg) + "%")"""
