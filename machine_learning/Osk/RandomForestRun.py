@@ -1,12 +1,6 @@
 import pandas as pd
-import numpy as np
 import os
-from sklearn.preprocessing import StandardScaler
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
-from scipy.stats import skew
-from sklearn.model_selection import train_test_split
-from matplotlib import pyplot as plt
 import pickle
 
 rfi = 0
@@ -21,6 +15,7 @@ X = dataset.iloc[:,0:5].values
 Y = dataset.iloc[:,5].values
 paths = dataset.iloc[:,6].values
 
+print(X)
 clf = pickle.load(open("model.sav",'rb'))
 y_pred = clf.predict(X)
 

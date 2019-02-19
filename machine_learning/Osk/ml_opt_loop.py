@@ -352,6 +352,7 @@ for h in range(iterations):
     dist_avg = 0
     for i in range(len(TP_iter)):
         dist_avg += (xTP[i][h] - xFP[i][h])/(len(TP_iter))
+        
     if (dist_avg  > max_avg):
         max_avg = dist_avg
         score_setting = h

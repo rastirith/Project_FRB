@@ -479,10 +479,7 @@ for i in range(0,72):
         rfi.append(m)
     
     fig = plt.figure()
-    #ax = fig.add_subplot(111,projection = '3d')
     ax = fig.add_subplot(111)
-    #print(rejected)
-    #ax.scatter(points[:, 1], points[:, 0], zs, c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 10)
     
     rejected = np.array(rejected)
     least_acc = np.array(least_acc)

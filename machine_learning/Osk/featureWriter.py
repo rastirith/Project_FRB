@@ -13,6 +13,8 @@ import warnings
 import itertools
 from scipy.stats import skew, kurtosis
 import math
+import pickle
+import time
 
 warnings.filterwarnings("ignore",category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore",category=RuntimeWarning)
@@ -119,6 +121,7 @@ def ks_cordes(dmArr,snArr,timeArr,peakDmMean,freq = 0.334,bandWidth = 64):
 
     statistic = stats.ks_2samp(snFreqArr,cordesFreqArr)
     return statistic[0]
+
 
 counter = 0
 true_pos = 0
@@ -352,11 +355,9 @@ for i in range(0,5):
             
             diff_SN = max(s_meanSN) - (0.5*s_meanSN[0] + 0.5*s_meanSN[-1])
             diff_DM = s_meanDM[-1] - s_meanDM[0] #?????center this around peak
+            
             sharp_ratio = diff_SN/(diff_SN + diff_DM) #height/width
-            ratios.append(sharp_ratio)    
-                
             shape_conf = rating/max_score
-            tot_conf = 0.743*shape_conf + 0.257*sharp_ratio
             
             skewness = skew(freq_arr, axis = 0)
             kurt = kurtosis(freq_arr, axis = 0, fisher = True)
@@ -375,11 +376,7 @@ for i in range(0,5):
                 class_vals.append(1)
             else:
                 class_vals.append(0)
-  
-            
-    #Re-order        
-    labels_arr = clusterSort(clusters, points)
-    clusterOrder(clusters)
+    
 
 dataframe = pd.DataFrame({'Shape Feature': shape_vals,
                           'Sharp Feature': sharp_vals,
@@ -389,5 +386,8 @@ dataframe = pd.DataFrame({'Shape Feature': shape_vals,
                           'Label': class_vals,
                           'Candidate paths: ': cand_paths})
 
-dataframe.to_csv("feature_table.csv")           
+dataframe.to_csv("feature_table.csv")
+
+
+         
     
