@@ -2,12 +2,7 @@ import glob, os
 import tkinter as tk
 import tkinter.ttk as ttk
 import numpy as np
-import threading
 import matplotlib.pyplot as plt
-#import tkFont
-#from tkinter.filedialog import askdirectory
-#from PIL import ImageTk as itk
-#from PIL import Image
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 
@@ -177,6 +172,10 @@ class main_frame(tk.Frame):
         self.left_btn = tk.Button(self, text = "Prev. plot", command = lambda: self.Left())
         self.right_btn.grid(row = 50, column = 24, columnspan = 6, rowspan = 3, pady = (5,5), sticky = "nw")
         self.left_btn.grid(row = 50, column = 17, columnspan = 6, rowspan = 3, pady = (5,5), sticky = "nw")
+        
+        # Button to display or hide classified plots
+        self.class_btn = tk.Button(self, text = "Show classifications", command = lambda: self.Right())
+        self.class_btn.grid(row = 17, column = 56, columnspan = 6, rowspan = 3, pady = (5,5))
         
     def Right(self):
         global source_ind
@@ -593,7 +592,11 @@ class preview_frame(tk.Frame):
         self.left_btn = tk.Button(self, text = "Prev. plot", command = lambda: self.Left())
         self.right_btn.grid(row = 50, column = 14, columnspan = 6, rowspan = 3, sticky = "nw", pady = (5,5))
         self.left_btn.grid(row = 50, column = 11, columnspan = 6, rowspan = 3, sticky = "nw", pady = (5,5))
-
+        
+        # Button to display or hide classified plots
+        self.class_btn = tk.Button(self, text = "Show classifications", command = lambda: self.Right())
+        self.class_btn.grid(row = 10, column = 56, columnspan = 6, rowspan = 3, sticky = "nw", pady = (5,5))
+        
     # Shows the next 4 thumbnail plots   
     def Right(self):
         global preview_ind
