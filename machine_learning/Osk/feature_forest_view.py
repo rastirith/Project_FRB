@@ -58,7 +58,7 @@ def DF(path):
     df = pd.DataFrame(c,columns=axislabels)
     Tfile.close()
     return df
-
+0
 
 def ks_cordes(dmArr,snArr,timeArr,peakDmMean,freq = 0.334,bandWidth = 64):
     cordes = []
@@ -384,7 +384,7 @@ for i in range(0,72):
                                   'Class': total[:,3]})
         
         new_name = source_paths[path].split("idir\\")[1].replace('.dat','_c.csv')
-        dataframe.to_csv(os.getcwd() + '\\idir\\' + "\\candidates\\" + new_name)
+        dataframe.to_csv(os.getcwd() + '\\idir\\' + "\\candidates\\" + new_name, index = False)
         new_path = os.getcwd() + '\\idir\\' + "\\candidates\\" + source_paths[path].split("idir\\")[1]
         
         if (os.path.isfile(new_path)) == False:
