@@ -41,7 +41,7 @@ def plotimg(path,xref,yref):
     data = np.fromfile(file,np.float32,-1) 
     c = data.reshape((-1,4))
     file.close()
-    
+
     #Defines labels for the axes corresponding to the four different sets of data available
     axislabels = ["DM", "Time", "s/n", "Width"]
     columns = np.hsplit(c,4) #x- and yref values dm=0, time=1, s/n=2, width=3
@@ -53,7 +53,7 @@ def plotimg(path,xref,yref):
     ax.set_ylabel(axislabels[yref])
     ax.scatter(columns[xref], columns[yref], color = "0.7", alpha = 1, vmin = -1, s = 10, label = "RFI/Background")
     ax.set_xlim(left = 0) #Sets lower x-limit to zero
-    ax.set_title(path)
+    ax.set_title(path.split('\\')[-1])
     return fig
 
 
@@ -75,15 +75,15 @@ def candPlot(path,xref,yref):
     file = open(candFile,'r')
     dataset = pd.read_csv(candFile)
 
-    X = dataset.iloc[:,1:5].values
+    X = dataset.iloc[:,1:6].values
     X = np.array(X)
-    
-    for i in range(len(X[:,3])):
-        if X[:,3][i] == 3:
+
+    for i in range(len(X[:,4])):
+        if X[:,4][i] == 3:
             excellent.append(X[i])
-        elif X[:,3][i] == 2:
+        elif X[:,4][i] == 2:
             good.append(X[i])
-        elif X[:,3][i] == 1:
+        elif X[:,4][i] == 1:
             least_acc.append(X[i])
     excellent = np.array(excellent)
     good = np.array(good)
@@ -100,16 +100,10 @@ def candPlot(path,xref,yref):
     ax.set_ylabel(axislabels[yref])
     ax.scatter(columns[xref], columns[yref], color = "0.7", alpha = 1, vmin = -1, s = 6, label = "RFI/Background")
     ax.set_xlim(left = 0) #Sets lower x-limit to zero
-    ax.set_title(path)
+    ax.set_title(path.split('\\')[-1])
     ax.legend()
     figs.append(fig)
-    """
-    if len(excellent) > 0:
-        ax.scatter(excellent[:,xref], excellent[:,yref], color = "r", alpha = 1, vmin = -1, s = 6, label = "Excellent")
-    if len(good) > 0:
-        ax.scatter(good[:,xref], good[:,yref], color = "m", alpha = 1, vmin = -1, s = 6, label = "Good")
-    if len(least_acc) > 0:
-        ax.scatter(least_acc[:,xref], least_acc[:,yref], color = "b", alpha = 1, vmin = -1, s = 6, label = "Least acceptable")"""
+
     ax.set_xlim(left = 0) #Sets lower x-limit to zero
     ax.set_title(path)
     ax.legend()

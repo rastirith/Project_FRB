@@ -25,8 +25,10 @@ class candClass(tk.Frame):
     least_acc = []
     
     axes = []
+    grayAx = None
     candAx = None
     candFig = None
+    showVar = 0
 
     
     def __init__(self, master, controller):
@@ -147,6 +149,7 @@ class candClass(tk.Frame):
         self.left_btn.grid(row = 50, column = 17, columnspan = 6, rowspan = 3, sticky = "nw", pady = (5,5))
         
         # Button to display or hide classified plots
+        #class_btn_text = tk.StringVar()
         self.class_btn = tk.Button(self, text = "Show classifications", command = lambda: self.candData(self.xref,self.yref))
         self.class_btn.config(height = 2, width = 20)
         self.class_btn.grid(row = 18, column = 51, columnspan = 6, rowspan = 4, pady = (5,5), padx = (15,0))
@@ -227,36 +230,57 @@ class candClass(tk.Frame):
         self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
     
     def candData(self, xref, yref):
-        candFile = self.current_choice[self.review_ind_frb].replace('.dat','_c.csv')
-        dataset = pd.read_csv(candFile)
+        
+        
+        if self.showVar == 0:
+            self.class_btn.config(text = "Hide classifications")
+            self.grayAx.set_label('RFI/Background')
+            candFile = self.current_choice[self.review_ind_frb].replace('.dat','_c.csv')
+            dataset = pd.read_csv(candFile)
+        
+            X = dataset.iloc[:,1:6].values
+            X = np.array(X)
+            
+            self.excellent = []
+            self.good = []
+            self.least_acc = []
+            
+            for i in range(len(X[:,4])):
+                if X[:,4][i] == 3:
+                    self.excellent.append(X[i])
+                elif X[:,4][i] == 2:
+                    self.good.append(X[i])
+                elif X[:,4][i] == 1:
+                    self.least_acc.append(X[i])
+            self.excellent = np.array(self.excellent)
+            self.good = np.array(self.good)
+            self.least_acc = np.array(self.least_acc)
     
-        X = dataset.iloc[:,1:5].values
-        X = np.array(X)
-        
-        self.excellent = []
-        self.good = []
-        self.least_acc = []
-        
-        for i in range(len(X[:,3])):
-            if X[:,3][i] == 3:
-                self.excellent.append(X[i])
-            elif X[:,3][i] == 2:
-                self.good.append(X[i])
-            elif X[:,3][i] == 1:
-                self.least_acc.append(X[i])
-        self.excellent = np.array(self.excellent)
-        self.good = np.array(self.good)
-        self.least_acc = np.array(self.least_acc)
+            if len(self.excellent) > 0:
+                self.axes.append(self.candAx.scatter(self.excellent[:,xref], self.excellent[:,yref], color = "r", alpha = 1, vmin = -1, s = 6, label = "Excellent"))
+            if len(self.good) > 0:
+                self.axes.append(self.candAx.scatter(self.good[:,xref], self.good[:,yref], color = "m", alpha = 1, vmin = -1, s = 6, label = "Good"))
+            if len(self.least_acc) > 0:
+                self.axes.append(self.candAx.scatter(self.least_acc[:,xref], self.least_acc[:,yref], color = "b", alpha = 1, vmin = -1, s = 6, label = "Least acceptable"))
+            self.candAx.legend()
+            self.canvas = FigureCanvasTkAgg(self.candFig, self)
+            self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+            self.showVar = 1
+        else:
+            if len(self.axes) > 0:
+                self.class_btn.config(text = "Show classifications")
+                for i in self.axes:
+                    i.remove()
+                self.grayAx.set_label('Events')
+                self.candAx.legend()
+            else:
+                print("No candidates highlighted.")
 
-        if len(self.excellent) > 0:
-            self.axes.append(self.candAx.scatter(self.excellent[:,xref], self.excellent[:,yref], color = "r", alpha = 1, vmin = -1, s = 6, label = "Excellent"))
-        if len(self.good) > 0:
-            self.axes.append(self.candAx.scatter(self.good[:,xref], self.good[:,yref], color = "m", alpha = 1, vmin = -1, s = 6, label = "Good"))
-        if len(self.least_acc) > 0:
-            self.axes.append(self.candAx.scatter(self.least_acc[:,xref], self.least_acc[:,yref], color = "b", alpha = 1, vmin = -1, s = 6, label = "Least acceptable"))
-        
-        self.canvas = FigureCanvasTkAgg(self.candFig, self)
-        self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+            self.canvas = FigureCanvasTkAgg(self.candFig, self)
+            self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+            self.axes = []
+            self.showVar = 0
+
         
     def eraseCand(self):
         if len(self.axes) > 0:
@@ -291,9 +315,9 @@ class candClass(tk.Frame):
         self.candAx = self.candFig.add_subplot(111)
         self.candAx.set_xlabel(axislabels[xref])
         self.candAx.set_ylabel(axislabels[yref])
-        self.candAx.scatter(columns[xref], columns[yref], color = "0.7", alpha = 1, vmin = -1, s = 6, label = "RFI/Background")
+        self.grayAx = self.candAx.scatter(columns[xref], columns[yref], color = "0.7", alpha = 1, vmin = -1, s = 6, label = "Events")
         self.candAx.set_xlim(left = 0) #Sets lower x-limit to zero
-        self.candAx.set_title(path)
+        self.candAx.set_title(path.split('\\')[-1])
         self.candAx.legend()
 
     def emptycanvas(self):

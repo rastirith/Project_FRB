@@ -94,6 +94,10 @@ def ks_cordes(dmArr,snArr,timeArr,peakDmMean,freq = 0.334,bandWidth = 64):
     peakSN = max(snArr)
     snFreqArr = []
     cordesFreqArr = []
+    sum = 0
+    sumArr = []
+    cordSum = 0
+    cordArr = []
     
     Wms = np.percentile(timeArr,75)-np.percentile(timeArr,25)
     Wms = Wms*1000
@@ -104,22 +108,47 @@ def ks_cordes(dmArr,snArr,timeArr,peakDmMean,freq = 0.334,bandWidth = 64):
     zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*x
     
     for i in range(len(x)):
-        cordes.append((math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i]))
-
+        y = (math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i])
+        cordes.append(y)
+        cordSum += y
+        cordArr.append(cordSum)
+        
+    for i in range(len(cordArr)):
+        cordArr[i] = cordArr[i]/cordArr[-1]
     
     for i in range(len(snRatios)):
         temp_arr = []
         frequency = int(snRatios[i]*1000)              # Needs to be an integer, timed it by 1000 to reduce rounding errors, proportions still same
-        temp_arr = [dmScaled[i]] * frequency   # Creates the corresponding number of elements and adds it to the array
+        temp_arr = [dmScaled[i]] * frequency            # Creates the corresponding number of elements and adds it to the array
         snFreqArr.extend(temp_arr)
+        sum += frequency
+        sumArr.append(sum)
+    
     
     for i in range(len(cordes)):
         temp_arr = []
         frequency = int(cordes[i]*1000)
         temp_arr = [x[i]] * frequency
         cordesFreqArr.extend(temp_arr)
+    
+    for i in range(len(sumArr)):
+        sumArr[i] = sumArr[i]/sumArr[-1]
+    
+    
+    #sumArr = sumArr/sumArr[-1]
 
     statistic = stats.ks_2samp(snFreqArr,cordesFreqArr)
+    fig = plt.figure()
+    ax = fig.add_subplot(211)
+    ax.plot(dmScaled, sumArr)
+    ax.scatter(dmScaled,sumArr)
+    ax.scatter(x, cordArr)
+    ax1 = fig.add_subplot(212)
+    ax1.scatter(dmArr,snArr)
+    #ax.hist(snFreqArr, bins = 200)
+    #ax.plot(x, cordes)
+    #ax.hist(temp_arr)
+    plt.show()
     return statistic[0]
 
 
@@ -377,7 +406,7 @@ for i in range(0,5):
             else:
                 class_vals.append(0)
     
-
+"""
 dataframe = pd.DataFrame({'Shape Feature': shape_vals,
                           'Sharp Feature': sharp_vals,
                           'Skewness': skew_vals,
@@ -386,7 +415,7 @@ dataframe = pd.DataFrame({'Shape Feature': shape_vals,
                           'Label': class_vals,
                           'Candidate paths: ': cand_paths})
 
-dataframe.to_csv("feature_table.csv")
+dataframe.to_csv("feature_table.csv")"""
 
 
          
