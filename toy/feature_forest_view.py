@@ -129,7 +129,7 @@ kstest_vals = []
 class_vals = []
 
 
-for i in range(0,72): 
+for i in range(0,4): 
     print(i)
     start = timer()
     para = 0
@@ -143,7 +143,7 @@ for i in range(0,72):
     orig_X = np.array(df)
     #print(len(orig_X))
     X_db = np.array(df.drop(columns=['Width', 'S/N']))
-    X = np.array(df.drop(columns=['Width']))
+    X = np.array(df)
     
     #sorted by DM
     points_db = X_db[X_db[:,0].argsort()]
@@ -359,17 +359,17 @@ for i in range(0,72):
     if_var = 0
     
     if (len(excellent) > 0):
-        excellent_c = np.full((len(excellent),4), 3, dtype = float)
+        excellent_c = np.full((len(excellent),5), 3, dtype = float)
         excellent_c[:,:-1] = excellent
         total.extend(excellent_c)
         if_var += 1
     if (len(good) > 0):
-        good_c = np.full((len(good),4), 2, dtype = float)
+        good_c = np.full((len(good),5), 2, dtype = float)
         good_c[:,:-1] = good
         total.extend(good_c)
         if_var += 1
     if (len(least_acc) > 0):
-        least_acc_c = np.full((len(least_acc),4), 1, dtype = float)
+        least_acc_c = np.full((len(least_acc),5), 1, dtype = float)
         least_acc_c[:,:-1] = least_acc
         total.extend(least_acc_c)
         if_var += 1
@@ -380,7 +380,8 @@ for i in range(0,72):
         dataframe = pd.DataFrame({'DM': total[:,0],
                                   'Time': total[:,1],
                                   'S/N': total[:,2],
-                                  'Class': total[:,3]})
+                                  'Width': total[:,3],
+                                  'Class': total[:,4]})
         
         new_name = source_paths[path].split("idir\\")[1].replace('.dat','_c.csv')
         dataframe.to_csv(os.getcwd() + '\\idir\\' + "\\candidates\\" + new_name)
