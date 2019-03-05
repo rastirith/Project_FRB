@@ -98,7 +98,7 @@ pos_array = [
         124, 125, 127, 128, 131, 133, 137, 142, 145, 146,
         147, 149, 150, 151, 152, 153
         ]
-
+print(len(pos_array))
 #array of file locations and chosing the file to inspect with path
 source_paths = []
 
@@ -109,7 +109,7 @@ for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
 ratios = []
 
 for i in range(0,72): 
-    print(i)
+    print(i)  
     para = 0
     path=i
     #setting which file to open
@@ -270,13 +270,18 @@ for i in range(0,72):
                 else:
                     rating += weight_4*score[i-max_ind-1]
             
-              
+
+            if rating <0:
+                rating=0
+            
             #sharpness
             diff_SN = max(s_meanSN) - (0.5*s_meanSN[0] + 0.5*s_meanSN[-1])
             diff_DM = s_meanDM[-1] - s_meanDM[0] #?????center this around peak
-            sharp_ratio = (7.1*diff_SN)/(3.7*diff_DM + 7.1*diff_SN) #height/width
-            ratios.append(sharp_ratio)    
-                
+            sharp_ratio = diff_SN/(diff_SN+diff_DM) #height/width
+            #ratios.append(sharp_ratio)    
+            
+            #confidence value
+
             shape_conf = rating/max_score
             tot_conf = 0.743*shape_conf + 0.257*sharp_ratio
             
@@ -310,7 +315,7 @@ for i in range(0,72):
                     true_neg[i] += 1
                 elif ((tot_conf < i*step) and (counter in pos_array)):
                     false_neg[i] += 1
-            
+                
     #Re-order        
     labels_arr = clusterSort(clusters, points)
     clusterOrder(clusters)                
@@ -390,15 +395,27 @@ plt.show()"""
 neg_num = counter - len(pos_array)
 x_val = np.arange(0,1,step)
 
+lim = [114,344,849]
+for i in lim:
+    print(true_pos[i])
+    print(false_pos[i])
+    print(false_neg[i])
+    print(true_neg[i])
+
 
 T_pos=[]
 F_neg=[] 
 T_neg=[] 
 F_pos=[]
-max_dist = 0
-lim = 0
+
+good= []
+ACC =[]
+acc=0 
 
 for i in range(int(1/step)):   
+    
+    acc = ((true_pos[i]+true_neg[i])/(true_pos[i] + false_neg[i]+true_neg[i] + false_pos[i]))
+    acc = round(100*acc,1)
     
     #accuracies?
     """
@@ -415,12 +432,13 @@ for i in range(int(1/step)):
     F_neg.append(round(100*false_neg[i]/(true_pos[i] + false_neg[i]), 1))
     T_neg.append(round(100*true_neg[i]/(true_neg[i] + false_pos[i]), 1))
     F_pos.append(round(100*false_pos[i]/(true_neg[i] + false_pos[i]), 1))
-    
-    if (TP - FP) > max_dist:
-        max_dist = TP - FP
-        lim = i*step
-        
-print("Max dist: " + str(max_dist))        
+
+    ACC.append(acc)
+    good.append(round(T_pos[i]-F_pos[i]))
+
+good_lim_index= np.argmax(good)
+good_lim= step*good_lim_index
+
 
 xTP = list(zip(x_val, T_pos))
 xFN = list(zip(x_val, F_neg))
@@ -431,14 +449,32 @@ xFNS = preprocessing.MinMaxScaler().fit_transform(xFN)
 xTNS = preprocessing.MinMaxScaler().fit_transform(xTN)
 xFPS = preprocessing.MinMaxScaler().fit_transform(xFP)
 
+print(good_lim)
+
 fig = plt.figure()
 ax = fig.add_subplot(111)
+
+ax.plot(x_val, T_pos, color = "g", label = "True positives")
+ax.plot(x_val, F_pos, color = "r", label = "False positives")
+ax.axvline(x=.114,c='0.5',alpha=0.4,linestyle='--')
+ax.axvline(x=.344,c='0.5',alpha=0.4,linestyle='--')
+ax.axvline(x=.849,c='0.5',alpha=0.4,linestyle='--')
+
+ax.plot(x_val, ACC, color = "k", label = "ACC")
+#ax.plot(x_val, T_neg, color = "k", label = "True negatives")
+#ax.plot(x_val, F_neg, color = "b", label = "False negatives")
+ax.set_xlim(left=0,right=1)
+ax.set_ylim(bottom=0,top=100)
+ax.set_title("Classification rate")
+ax.set_xlabel("Confidence measure")
+
 ax.plot(xTPS[:,0], xTPS[:,1], color = "g", label = "True positives")
 ax.plot(xFPS[:,0], xFPS[:,1], color = "r", label = "False positives")
 ax.plot(xTNS[:,0], xTNS[:,1], color = "k", label = "True negatives")
 ax.plot(xFNS[:,0], xFNS[:,1], color = "b", label = "False negatives")
 ax.set_title("Classification accuracy")
 ax.set_xlabel("Confidence low-limit")
+
 ax.set_ylabel("Percentage")
 
 fig2 = plt.figure()
@@ -453,6 +489,16 @@ ax1.set_ylabel("Percentage")
 
 plt.legend()
 
+fig2 = plt.figure()
+ax2 = fig2.add_subplot(111)
+ax2.scatter(F_pos, T_pos, color = "g", label = "True positives")
+ax2.plot(F_pos, F_pos, color = "r", label = "False positives")
+#ax.plot(x_val, T_neg, color = "k", label = "True negatives")
+#ax.plot(x_val, F_neg, color = "b", label = "False negatives")
+ax2.set_title("ROC")
+ax2.set_xlabel("FPR")
+ax2.set_ylabel("TPR")
+plt.show()
 """
 print("True positive: " + str(tr_pos) + "%")
 print("True negative: " + str(tr_neg) + "%")

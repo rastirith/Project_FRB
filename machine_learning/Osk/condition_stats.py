@@ -8,8 +8,6 @@ import pandas as pd
 from sklearn.cluster import DBSCAN
 import glob, os
 from sklearn import preprocessing 
-import itertools
-import matplotlib.pyplot as plt
 
 # Returns 'num' lowest elements of array 'arr' in a new array
 def sort(arr,num):
@@ -63,7 +61,10 @@ def ROWFORM(cluster_list,column_variable,array):
 #array of file locations and chosing the file to inspect with path
 source_paths = []
 
-df2_labels=['File_Path','DBclusters','Noiseclusters','DMlimitclusters','SNPclusters','NRFIclusters','bin1','bin2','bin3','bin4','bin5','bin6','bin7','bin8','bin9','bin10']
+#DataFrame utility
+
+df2_labels=['File_Path','DBSCAN','Noise','DMlimit','Peak location','Shape & Sharpness','NRFIclusters','REJECTED','Fair','Good','Excellent','bin1','bin2','bin3','bin4','bin5','bin6','bin7','bin8','bin9','bin10']
+
 df2 = pd.DataFrame(columns=df2_labels)
 #df2_data = [] #store a row of data per file to append to DF2 
 #print(df2.head())
@@ -72,9 +73,9 @@ df2 = pd.DataFrame(columns=df2_labels)
 for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
     source_paths.append(file)
 
-ratios = []
+#ratios = []
    
-for i in range(0,73): 
+for i in range(0,72): 
     #Variables for counting
     #step 1
     DBclusters = 0
@@ -89,9 +90,16 @@ for i in range(0,73):
     SNPclusters = 0
     #Sum_SNPclusters = 0
     #step 5
-    NRFIclusters = 0
+    REJECTED = 0
+    FAIRclusters = 0
+    GOODclusters = 0
+    EXCELclusters = 0
+    SNRclusters = 0
     #step 6
+    NRFIclusters = 0
+    #step 7
     Pbin= 10*[0] #array to store a count of singals by confidence percentiles
+    
     #Store a row of data per file to append to DF2    
     df2_data = []  
     
@@ -128,8 +136,8 @@ for i in range(0,73):
     
     X_scaled = preprocessing.MinMaxScaler().fit_transform(points_new) #Rescales the data so that the x- and y-axes get ratio 1:1
     
-    xeps = 0.025    # Radius of circle to look around for additional core points
-    xmin = 2        # Number of points within xeps for the point to count as core point
+    xeps = 0.005    # Radius of circle to look around for additional core points
+    xmin = 5      # Number of points within xeps for the point to count as core point
     
     clusters = DBSCAN(eps=xeps, min_samples = xmin, n_jobs = -1).fit_predict(X_scaled)   
     #plt.scatter(X_scaled[:, 1], X_scaled[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 15)
@@ -189,35 +197,36 @@ for i in range(0,73):
     #DMlimitclusters
     ROWFORM(labels_arr,DMlimitclusters,df2_data)
     
-    # Condition for peak location
+    #Conditions for SN
     for q in range(1,len(np.unique(clusters))):
-        
+    
         signalToDm = list(zip(labels_arr[q][:,0], labels_arr[q][:,2]))
         signalToDm = np.array(signalToDm)
         min_val = min(signalToDm[:,1])
         #sharpness
         scaled_signal = preprocessing.MinMaxScaler().fit_transform(signalToDm)
-             
+        
         #y=0 for visualisation
         for i in range(len(signalToDm[:,1])):
             signalToDm[:,1][i] = signalToDm[:,1][i] - min_val
             
         #splitting into chunks
         split_param = 7 #parameter to determine splitting of cluster for analysis
-        dummy = np.array_split(signalToDm,split_param)
+        dummy = np.array_split(signalToDm,split_param) #shape
         dummy2 = np.array_split(scaled_signal,split_param) #sharpness
-        
+        #shape
         meanSN = []
         meanDM = []
-        
+        #sharpness
         s_meanSN = []
         s_meanDM = []
         for i in range(len(dummy)):
+            #shape
             tempSN = np.mean(dummy[i][:,1])
             tempDM = np.mean(dummy[i][:,0])
             meanSN.append(tempSN)
             meanDM.append(tempDM)
-            #testing sharpness
+            #sharpness
             s_tempSN = np.mean(dummy2[i][:,1])
             s_tempDM = np.mean(dummy2[i][:,0])
             s_meanSN.append(s_tempSN)
@@ -225,7 +234,6 @@ for i in range(0,73):
         
         max_val = max(meanSN + min_val)
         
-       
         #Condition for location of peak S/N
         max_ind = np.argmax(meanSN)
         if (max_ind > 4) or (max_ind < 2):
@@ -235,64 +243,72 @@ for i in range(0,73):
         
         #developing peak shape conditions
         else:
-            weight_1 = 1/3
-            weight_2 = 2/3
-            weight_3 = -0.1
+
+            weight_1 = -1
+            weight_2 = -0.3
+            weight_3 = 1
+            weight_4 = -1
             check_1 = 0.075
             check_2 = 0.15
-            score = [1,2,1.5,1.5]
+            score = [0,1.3,2.5,2.5]
+            max_score = 2*(score[0] + score[1] + score[2])
+
             rating = 0
-            
-            sub_arr1 = meanDM[0:max_ind + 1]
-            sub_arr2 = meanDM[max_ind:len(meanDM)]
-            
-            diffs1 = [abs(e[1] - e[0]) for e in itertools.permutations(sub_arr1, 2)]
-            diffs2 = [abs(e[1] - e[0]) for e in itertools.permutations(sub_arr2, 2)]
-            
-            avg_diff1 = sum(diffs1)/len(diffs1)
-            avg_diff2 = sum(diffs2)/len(diffs2)
-            
-            diffDiff = abs(avg_diff1 - avg_diff2)
-            sumDiff = avg_diff1 + avg_diff2
-            diffRatio = diffDiff/sumDiff
-            
+            #bins left side of peak
             for i in range(max_ind - 1, -1, -1):
                 ratio=meanSN[i]/meanSN[i+1]
-                
+            
                 if ((ratio>=(1-check_1)) and (ratio<=1)):
                     rating += weight_1*score[max_ind-(i+1)]
                 elif ((ratio>=(1-check_2)) and (ratio<=1)):
                     rating += weight_2*score[max_ind-(i+1)]
-                elif ratio <=1:
-                    rating += score[max_ind-(i+1)]
-                else:
+                elif (ratio<=1):
                     rating += weight_3*score[max_ind-(i+1)]
-                    
+                else:
+                    rating += weight_4*score[max_ind-(i+1)]
+            #bins right side
             for i in range((max_ind+1),split_param):
                 ratio=meanSN[i]/meanSN[i-1]
-                
+
                 if ((ratio>=(1-check_1)) and (ratio<=1)):
                     rating += weight_1*score[i-max_ind-1]
                 elif ((ratio>=(1-check_2)) and (ratio<=1)):
                     rating += weight_2*score[i-max_ind-1]
                 elif ratio <=1:
-                    rating += score[i-max_ind-1]
-                else:
                     rating += weight_3*score[i-max_ind-1]
-            confidence = rating/9
-            SN_conf = 0.9828639 + ((-0.9828632502)/(1+((max_val/4.630117)**1.341797)))
-            diff_conf = 0.2 + ((0.46)/(1+((diffRatio/0.5949996)**1450.932)))
-            tot_conf = 0.25*SN_conf + 0.15* diff_conf + 0.60*confidence
+                else:
+                    rating += weight_4*score[i-max_ind-1]
+            
+            if rating <0:
+                rating =0
             
             #sharpness
-            diff_SN = max(s_meanSN) - min(s_meanSN)
+            diff_SN = max(s_meanSN) - (0.5*s_meanSN[0] + 0.5*s_meanSN[-1])
             diff_DM = s_meanDM[-1] - s_meanDM[0] #?????center this around peak
-            sharp_ratio = diff_SN/diff_DM #height/width
-            ratios.append(sharp_ratio)
-        
+            sharp_ratio = diff_SN/(diff_SN+diff_DM) #height/width
+            #ratios.append(sharp_ratio)    
+            
+            #confidence value
+            shape_conf = rating/max_score
+            tot_conf = 0.743*shape_conf + 0.257*sharp_ratio
+
+            #confidence conditions
+            conf_lim0 = 0.114 #<=fair
+            conf_lim1 = 0.344 #<=good
+            conf_lim2 = 0.849 #<=excellent
+    
+            if tot_conf<conf_lim0:
+                REJECTED+=1
+            elif tot_conf<conf_lim1:
+                FAIRclusters+=1
+            elif tot_conf<conf_lim2:
+                GOODclusters+=1
+            else:
+                EXCELclusters+=1
+
             #Pbin getting a count depending on conf. percentile
             for i in range(1,11):
-                if sharp_ratio<(i/10):
+                if tot_conf<(i/10):
                     Pbin[i-1]+=1
                     break
             
@@ -303,9 +319,19 @@ for i in range(0,73):
     #SNPclusters
     ROWFORM(labels_arr,SNPclusters,df2_data)
     
+    #SNRclusters
+    SNRclusters = FAIRclusters+GOODclusters+EXCELclusters
+    df2_data.append(SNRclusters)
+    
     #NRFIclusters
-    NRFIclusters = len(labels_arr)-1
+    NRFIclusters = len(labels_arr)-1-REJECTED
     df2_data.append(NRFIclusters)
+    
+    #Rating for cluster
+    df2_data.append(REJECTED)
+    df2_data.append(FAIRclusters)
+    df2_data.append(GOODclusters)
+    df2_data.append(EXCELclusters)
     
     #Pbin to data
     df2_data = np.array(df2_data + Pbin)
@@ -325,5 +351,9 @@ for i in range(0,73):
     #print("Old array length: " + str(len(points)))
     #print("New array length: " + str(len(points_new)))
 
-plt.hist(ratios,bins=10)
-df2.to_csv('condition_stats_sharpness',index=False)
+#plt.hist(ratios,bins=10)
+#Writing to file
+
+df2.to_csv('condition_stats_23',index=False)
+
+
