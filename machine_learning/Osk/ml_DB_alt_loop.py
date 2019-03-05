@@ -91,13 +91,25 @@ false_pos = 0
 true_neg = 0
 false_neg = 0
 
-pos_array = [
+pos_array_mp2 = [
         1, 3, 7, 8, 10, 14, 19, 20, 22, 24, 30, 31, 38,
         39, 61, 71, 74, 90, 96, 97, 99, 100, 101, 102,
         103, 104, 105, 107, 111, 112, 114, 120, 121, 122,
         124, 125, 127, 128, 131, 133, 137, 142, 145, 146,
         147, 149, 150, 151, 152, 153
         ]
+
+pos_array_mp3 = [
+        8, 20, 22, 24, 1, 3, 7, 30, 31, 74, 71, 101, 102,
+        103, 104, 105, 107, 112, 114, 120, 121, 122, 124,
+        125, 127, 128, 131, 137, 142, 145, 146, 147, 149,
+        150, 153, 133, 151
+        ]
+
+
+
+pos_array = pos_array_mp3
+
 
 #array of file locations and chosing the file to inspect with path
 source_paths = []
@@ -126,7 +138,9 @@ oskar_meanSN = [None]*2
 chris_width = [None]*2
 oskar_width = [None]*2
 
-for i in range(0,5): 
+
+for i in range(0,72): 
+
     print(i)
     para = 0
     path=i
@@ -159,27 +173,14 @@ for i in range(0,5):
             points_new.append(points_db[i])
             
            
-    points_new = np.array(points_new)
-    if path == 2: 
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.scatter(points[:, 1], points[:, 2], c = "b", cmap="Paired", alpha = 0.4, vmin = -1, s = 10, label = "Detected events")
-        
-        ax.set_xlim(left = 0)
-        ax.set_ylim(bottom = 0)
-        plt.xlabel("DM (pc $cm^-3$)")
-        plt.ylabel("S/N")
-        #plt.title(path)
-        plt.title("S/N-DM plot of candidate")
-        ax.legend(markerscale=2.5)
-        
-        plt.show()
-    
+    points_new = np.array(points_new)   
     
     X_scaled = preprocessing.MinMaxScaler().fit_transform(points_new) #Rescales the data so that the x- and y-axes get ratio 1:1
     
-    xeps = 0.005    # Radius of circle to look around for additional core points
-    xmin = 5       # Number of points within xeps for the point to count as core point
+
+    xeps = 0.025     # Radius of circle to look around for additional core points
+    xmin = 3         # Number of points within xeps for the point to count as core point
+
     
     clusters = DBSCAN(eps=xeps, min_samples = xmin, n_jobs = -1).fit_predict(X_scaled)  
     #plt.scatter(X_scaled[:, 1], X_scaled[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 15)
@@ -272,6 +273,7 @@ for i in range(0,5):
         
         #Condition for location of peak S/N
         max_ind = np.argmax(meanSN)
+        peakMeanDm = meanDM[max_ind]
         if (max_ind > 4) or (max_ind < 2):
             for i in range(len(clusters)):
                 if (clusters[i] == q - 1):
@@ -279,6 +281,7 @@ for i in range(0,5):
         
            #developing peak shape conditions
         else:
+            print(peakMeanDm)
             counter += 1
             
             weight_1 = -1
@@ -336,6 +339,7 @@ for i in range(0,5):
             tot_conf = 0.743*shape_conf + 0.257*sharp_ratio
             
             
+            
             least_lim = 0.114
             good_lim = 0.344
             exc_lim = 0.849
@@ -391,19 +395,19 @@ for i in range(0,5):
                 oskar_tot[1] = round(tot_conf,2)
                 oskar_width[1] = xwidth
                 
-              
-                   
+
             fig = plt.figure()
             ax1 = fig.add_subplot(111)
             ax1.bar(meanDM,meanSN, align='center',width=xwidth, alpha=0.2)
             
             props = dict(boxstyle='round', facecolor='wheat', alpha=0.3)
+            numtext = "Num: " + str(counter)
             textstr = "Shape: " + str(round(shape_conf,2)) + "\nSharp: " + str(round(sharp_ratio,2)) + "\nTot: " + str(round(tot_conf,2)) + "\nCount: " + str(counter)
-            ax1.text(0.05, 0.95, textstr, transform=ax1.transAxes, fontsize=14, verticalalignment='top', bbox=props)
+            ax1.text(0.05, 0.95, numtext, transform=ax1.transAxes, fontsize=14, verticalalignment='top', bbox=props)
             
             ax1.set_title("besh")
             ax = fig.add_subplot(111)
-            ax.scatter(signalToDm[:,0], signalToDm[:, 1], alpha = 0.4, vmin = -1, s = 10)
+            ax.scatter(signalToDm[:,0], signalToDm[:,1], alpha = 0.4, vmin = -1, s = 10)
 
             ax.set_xlabel("DM")
             ax.set_ylabel("S/N")
@@ -477,12 +481,10 @@ for i in range(0,5):
     labs = ["one", "two", "three", "four", "five"]
     for m in labels_arr[0]:
         rfi.append(m)
-    """
-    """fig = plt.figure()
-    #ax = fig.add_subplot(111,projection = '3d')
+
+    fig = plt.figure()
+
     ax = fig.add_subplot(111)
-    #print(rejected)
-    #ax.scatter(points[:, 1], points[:, 0], zs, c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 10)
     
     rejected = np.array(rejected)
     least_acc = np.array(least_acc)
@@ -490,12 +492,18 @@ for i in range(0,5):
     excellent = np.array(excellent)
     rfi = np.array(rfi)
     
-    ax.scatter(excellent[:,1], excellent[:,0], c = "r", alpha = 1, vmin = -1, s = 10, label = "Excellent")
-    ax.scatter(good[:,1], good[:,0], c = "m", alpha = 1, vmin = -1, s = 10, label = "Good")
-    ax.scatter(least_acc[:,1], least_acc[:,0], c = "b", alpha = 1, vmin = -1, s = 10, label = "Least Acceptable")
-    ax.scatter(rejected[:,1], rejected[:,0], c = "k", alpha = 1, vmin = -1, s = 10, label = "Rejected")
-    ax.scatter(rfi[:,1], rfi[:,0], color = "0.7", alpha = 1, vmin = -1, s = 10, label = "RFI/Background")
+    if (len(excellent) > 0):
+        ax.scatter(excellent[:,1], excellent[:,0], c = "r", alpha = 1, vmin = -1, s = 10, label = "Excellent")
+    if (len(good) > 0):
+        ax.scatter(good[:,1], good[:,0], c = "m", alpha = 1, vmin = -1, s = 10, label = "Good")
+    if (len(least_acc) > 0):
+        ax.scatter(least_acc[:,1], least_acc[:,0], c = "b", alpha = 1, vmin = -1, s = 10, label = "Least Acceptable")
+    if (len(rejected) > 0):
+        ax.scatter(rejected[:,1], rejected[:,0], c = "k", alpha = 1, vmin = -1, s = 10, label = "Rejected")
+    if (len(rfi) > 0):
+        ax.scatter(rfi[:,1], rfi[:,0], color = "0.7", alpha = 1, vmin = -1, s = 10, label = "RFI/Background")
     
+    print(rfi)
     ax.set_xlim(left = 0)
     ax.set_ylim(bottom = 0)
     plt.xlabel("Time (s)")
@@ -503,7 +511,7 @@ for i in range(0,5):
     plt.title("DM-time plot with algorithm classifications")
     ax.legend(markerscale=2.5)
     
-    plt.show()"""
+    plt.show()
 """
 fig2 = plt.figure()
 ax3 = fig2.add_subplot(111)
@@ -516,14 +524,16 @@ tr_pos = round(100*true_pos/len(pos_array), 1)
 fl_neg = 100 - round(100*true_pos/len(pos_array), 1)
 tr_neg = round(100*true_neg/(counter - len(pos_array)), 1)
 fl_pos = round(100*false_pos/(counter - len(pos_array)), 1)"""
+
 """       
+
 oskar = np.array(oskar)
 chris = np.array(chris)
 chris_meanDM = np.array(chris_meanDM)
 chris_meanSN = np.array(chris_meanSN)
 oskar_meanDM = np.array(oskar_meanDM)
 oskar_meanSN = np.array(oskar_meanSN)
-
+"""
 fig = plt.figure()
 ax1 = fig.add_subplot(211)
 ax1.bar(oskar_meanDM[0],oskar_meanSN[0], align='center',width=oskar_width[0], alpha=0.2)
@@ -554,10 +564,10 @@ ax3.scatter(oskar[2], oskar[3], vmin = -1, s = 10, label = "Data points")
 ax3.set_xlabel("DM (pc $cm^-3$)")
 ax3.set_ylabel("S/N")
 #fig.tight_layout()
-plt.show()
+plt.show()"""
 
 
-
+"""
 bot_D = []
 bot_C = []
 bot_B = []
@@ -576,8 +586,10 @@ ax1.bar(x_val, conf_D, bottom = bot_D, label = "Rejected")
 ax1.bar(x_val, conf_C, bottom = bot_C, label = "Least acceptable")
 ax1.bar(x_val, conf_B, bottom = bot_B, label = "Good")
 ax1.bar(x_val, conf_A, bottom = bot_A, label = "Excellent")
-plt.legend()
-"""
+
+plt.legend()"""
+
+
 """
 print("True positive: " + str(tr_pos) + "%")
 print("True negative: " + str(tr_neg) + "%")

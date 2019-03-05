@@ -11,7 +11,10 @@ import scipy.cluster.hierarchy as hcluster
 import sys
 import warnings
 import itertools
-import random
+from scipy.stats import skew, kurtosis
+import math
+import pickle
+import time
 
 warnings.filterwarnings("ignore",category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore",category=RuntimeWarning)
@@ -85,57 +88,66 @@ def DF(path):
     Tfile.close()
     return df
 
-step = 0.01
 
-score_step = 0.1
-score_range = 3
-scoresteps_1d = int(score_range/score_step)
-score_iterations = int((scoresteps_1d)**3)
+def ks_cordes(dmArr,snArr,timeArr,peakDmMean,freq = 0.334,bandWidth = 64):
+    cordes = []
+    peakSN = max(snArr)
+    snFreqArr = []
+    cordesFreqArr = []
+    
+    Wms = np.percentile(timeArr,75)-np.percentile(timeArr,25)
+    Wms = Wms*1000
+    dmScaled = dmArr - peakDmMean
+    snRatios = snArr/peakSN
+    
+    x = np.linspace(min(dmScaled),max(dmScaled),2000)
+    zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*x
+    
+    for i in range(len(x)):
+        cordes.append((math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i]))
 
+    
+    for i in range(len(snRatios)):
+        temp_arr = []
+        frequency = int(snRatios[i]*1000)              # Needs to be an integer, timed it by 1000 to reduce rounding errors, proportions still same
+        temp_arr = [dmScaled[i]] * frequency   # Creates the corresponding number of elements and adds it to the array
+        snFreqArr.extend(temp_arr)
+    
+    for i in range(len(cordes)):
+        temp_arr = []
+        frequency = int(cordes[i]*1000)
+        temp_arr = [x[i]] * frequency
+        cordesFreqArr.extend(temp_arr)
 
-weight_step = 0.1
-weight_range = 2
-weightsteps_1d = int(weight_range/weight_step)
-weight_iterations = int((weightsteps_1d + 1)**4)
-
-
-
-
-#iter_arr = np.zeros(200)
-score_struct = []
-weight_struct = []
-TP_iter = np.zeros((int(1/step), weight_iterations))
-FP_iter = np.zeros((int(1/step), weight_iterations))
-TN_iter = np.zeros((int(1/step), weight_iterations))
-FN_iter = np.zeros((int(1/step), weight_iterations))
-
-for i in range(int(-0.5*weightsteps_1d), int(0.5*weightsteps_1d + 1)):
-    a = i*weight_step
-    print(a)
-    for k in range(int(-0.5*weightsteps_1d), int(0.5*weightsteps_1d + 1)):
-        b = k*weight_step
-        for m in range(int(-0.5*weightsteps_1d), int(0.5*weightsteps_1d + 1)):
-            c = m*weight_step
-            for n in range(int(-0.5*weightsteps_1d), int(0.5*weightsteps_1d + 1)):
-                d = n*weight_step
-                weight_struct.append([a,b,c,d])
-
-weight_struct = np.array(weight_struct)
+    statistic = stats.ks_2samp(snFreqArr,cordesFreqArr)
+    return statistic[0]
 
 
 counter = 0
-true_pos = np.zeros(int(1/step))
-false_pos = np.zeros(int(1/step))
-true_neg = np.zeros(int(1/step))
-false_neg = np.zeros(int(1/step))
+true_pos = 0
+false_pos = 0
+true_neg = 0
+false_neg = 0
 
-pos_array = [
+pos_array_mp2 = [
         1, 3, 7, 8, 10, 14, 19, 20, 22, 24, 30, 31, 38,
         39, 61, 71, 74, 90, 96, 97, 99, 100, 101, 102,
         103, 104, 105, 107, 111, 112, 114, 120, 121, 122,
         124, 125, 127, 128, 131, 133, 137, 142, 145, 146,
         147, 149, 150, 151, 152, 153
         ]
+
+pos_array_mp3 = [
+        8, 20, 22, 24, 1, 3, 7, 30, 31, 74, 71, 101, 102,
+        103, 104, 105, 107, 112, 114, 120, 121, 122, 124,
+        125, 127, 128, 131, 137, 142, 145, 146, 147, 149,
+        150, 153, 133, 151
+        ]
+
+
+
+pos_array = pos_array_mp3
+
 
 #array of file locations and chosing the file to inspect with path
 source_paths = []
@@ -146,10 +158,20 @@ for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
     
 ratios = []
 
-for i in range(0,72): 
-    print("\n" + str(i))
+shape_vals = []
+sharp_vals = []
+skew_vals = []
+kurt_vals = []
+kstest_vals = []
+class_vals = []
+cand_paths = []
+
+
+for i in range(0,5): 
+    print(i)
     para = 0
     path=i
+    
     #setting which file to open
     FILE = source_paths[path]
     #getting df for test file
@@ -175,12 +197,13 @@ for i in range(0,72):
            
     points_new = np.array(points_new)
     
+    
     X_scaled = preprocessing.MinMaxScaler().fit_transform(points_new) #Rescales the data so that the x- and y-axes get ratio 1:1
     
-    xeps = 0.025    # Radius of circle to look around for additional core points
-    xmin = 2        # Number of points within xeps for the point to count as core point
+    xeps = 0.025     # Radius of circle to look around for additional core points
+    xmin = 3         # Number of points within xeps for the point to count as core point
     
-    clusters = DBSCAN(eps=xeps, min_samples = xmin).fit_predict(X_scaled)  
+    clusters = DBSCAN(eps=xeps, min_samples = xmin, n_jobs = -1).fit_predict(X_scaled)  
     #plt.scatter(X_scaled[:, 1], X_scaled[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 15)
     
     # Re-inserts bottom points with labels -1 for RFI
@@ -225,17 +248,22 @@ for i in range(0,72):
     labels_arr = clusterSort(clusters, points)
     clusterOrder(clusters)
     
+    rejected = []
+    least_acc = []
+    good = []
+    excellent = []
+    rfi = []
+    
     # Condition for peak location
     # Condition for peak location
-    clustcount = len(np.unique(clusters))
     for q in range(1,len(np.unique(clusters))):
-        
+    
         signalToDm = list(zip(labels_arr[q][:,0], labels_arr[q][:,2]))
         signalToDm = np.array(signalToDm)
         min_val = min(signalToDm[:,1])
         #sharpness
         scaled_signal = preprocessing.MinMaxScaler().fit_transform(signalToDm)
-        
+
         #y=0 for visualisation
         for i in range(len(signalToDm[:,1])):
             signalToDm[:,1][i] = signalToDm[:,1][i] - min_val
@@ -264,153 +292,102 @@ for i in range(0,72):
         max_val = max(meanSN + min_val)
         
         
-        #Condition for location of peak S/N
+        # Condition for location of peak S/N
         max_ind = np.argmax(meanSN)
+        peakMeanDm = meanDM[max_ind]
         if (max_ind > 4) or (max_ind < 2):
             for i in range(len(clusters)):
                 if (clusters[i] == q - 1):
                     clusters[i] = -1
         
-           #developing peak shape conditions
+        # Developing peak shape conditions
         else:
             counter += 1
+            freq_arr = []
             
-            for h in range(len(weight_struct)):
-                #progressBar(h,len(score_struct))
-                
-                weight_1 = weight_struct[h][0]
-                weight_2 = weight_struct[h][1]
-                weight_3 = weight_struct[h][2]
-                weight_4 = weight_struct[h][3]
-                check_1 = 0.075
-                check_2 = 0.15
-                check_3 = 0.25
-                score = [0,1.3,2.5,2.5]
-                max_score = 2*(score[0] + score[1] + score[2])
+            weight_1 = -1
+            weight_2 = -0.3
+            weight_3 = 1
+            weight_4 = -1
+            check_1 = 0.075
+            check_2 = 0.15
+            score = [0,1.3,2.5,2.5]
+            max_score = 2*(score[0] + score[1] + score[2])
+            
+            rating = 0
+            
+            for i in range(max_ind - 1, -1, -1):
+                ratio=meanSN[i]/meanSN[i+1]
+            
+                if ((ratio>=(1-check_1)) and (ratio<=1)):
+                    rating += weight_1*score[max_ind-(i+1)]
+                elif ((ratio>=(1-check_2)) and (ratio<=1)):
+                    rating += weight_2*score[max_ind-(i+1)]
+                elif (ratio<=1):
+                    rating += weight_3*score[max_ind-(i+1)]
+                else:
+                    rating += weight_4*score[max_ind-(i+1)]
+
+            for i in range((max_ind+1),split_param):
+                ratio=meanSN[i]/meanSN[i-1]
+
+                if ((ratio>=(1-check_1)) and (ratio<=1)):
+                    rating += weight_1*score[i-max_ind-1]
+                elif ((ratio>=(1-check_2)) and (ratio<=1)):
+                    rating += weight_2*score[i-max_ind-1]
+                elif ratio <=1:
+                    rating += weight_3*score[i-max_ind-1]
+                else:
+                    rating += weight_4*score[i-max_ind-1]
+            #sharpness
+            if rating < 0:
                 rating = 0
-                
-                sub_arr1 = meanDM[0:max_ind + 1]
-                sub_arr2 = meanDM[max_ind:len(meanDM)]
-                
-                for i in range(max_ind - 1, -1, -1):
-                    ratio=meanSN[i]/meanSN[i+1]
-                
-                    if ((ratio>=(1-check_1)) and (ratio<=1)):
-                        rating += weight_1*score[max_ind-(i+1)]
-                    elif ((ratio>=(1-check_2)) and (ratio<=1)):
-                        rating += weight_2*score[max_ind-(i+1)]
-                    elif (ratio<=1):
-                        rating += weight_3*score[max_ind-(i+1)]
-                    else:
-                        rating += weight_4*score[max_ind-(i+1)]
-    
-                for i in range((max_ind+1),split_param):
-                    ratio=meanSN[i]/meanSN[i-1]
-    
-                    if ((ratio>=(1-check_1)) and (ratio<=1)):
-                        rating += weight_1*score[i-max_ind-1]
-                    elif ((ratio>=(1-check_2)) and (ratio<=1)):
-                        rating += weight_2*score[i-max_ind-1]
-                    elif ratio <=1:
-                        rating += weight_3*score[i-max_ind-1]
-                    else:
-                        rating += weight_4*score[i-max_ind-1]
-                  
-                #sharpness
-                diff_SN = max(s_meanSN) - (0.5*s_meanSN[0] + 0.5*s_meanSN[-1])
-                diff_DM = s_meanDM[-1] - s_meanDM[0] #?????center this around peak
-                sharp_ratio = diff_SN/diff_DM #height/width
-                ratios.append(sharp_ratio)    
-                    
-                shape_conf = rating/max_score
-                tot_conf = 0.5*shape_conf + 0.5*sharp_ratio
-                #int(0.5*len(true_pos)),int(0.8*len(true_pos))
-                for i in range(len(true_pos)):
-                
-                    if ((tot_conf >= i*step) and (counter in pos_array)):
-                        true_pos[i] += 1
-                        TP_iter[i][h] += 1
-                    elif ((tot_conf >= i*step) and (counter not in pos_array)):
-                        false_pos[i] += 1
-                        FP_iter[i][h] += 1
-                    elif ((tot_conf < i*step) and (counter not in pos_array)):
-                        true_neg[i] += 1
-                        TN_iter[i][h] += 1
-                    elif ((tot_conf < i*step) and (counter in pos_array)):
-                        false_neg[i] += 1
-                        FN_iter[i][h] += 1
-                        
-            progressBar(q, clustcount)
             
-    #Re-order        
-    labels_arr = clusterSort(clusters, points)
-    clusterOrder(clusters)                  
-
-x_val = np.arange(0,1,step)
-
-T_pos=[]
-F_neg=[] 
-T_neg=[] 
-F_pos=[]
-
-xTP = np.zeros((int(1/step),weight_iterations))
-xFN = np.zeros((int(1/step),weight_iterations))
-xTN = np.zeros((int(1/step),weight_iterations))
-xFP = np.zeros((int(1/step),weight_iterations))
-
-for i in range(len(TP_iter)):
-    for h in range(weight_iterations):
-        
-        if (TP_iter[i][h] + FN_iter[i][h]) != 0:
-            xTP[i][h] = 100*TP_iter[i][h]/(TP_iter[i][h] + FN_iter[i][h])
-            xFN[i][h] = 100*FN_iter[i][h]/(TP_iter[i][h] + FN_iter[i][h])
-        if (TN_iter[i][h] + FP_iter[i][h]) != 0:
-            xTN[i][h] = 100*TN_iter[i][h]/(TN_iter[i][h] + FP_iter[i][h])
-            xFP[i][h] = 100*FP_iter[i][h]/(TN_iter[i][h] + FP_iter[i][h])       
-
-conf_setting = 0
-weight_setting = 0  
-max_avg = 0   
-for h in range(weight_iterations):
-    dist_avg = 0
-    for i in range(len(TP_iter)):
-        dist_avg += (xTP[i][h] - xFP[i][h])/(len(TP_iter))
-    if (dist_avg  > max_avg):
-        max_avg = dist_avg
-        weight_setting = h
-        #print(h)
-        #print(dist_avg)
-        #print(weight_struct[h])
-"""   
-dist = 0   
-for i in range (len(TP_iter)):       
-    if ((xTP[i][weight_setting] - xFP[i][weight_setting]) > dist):
-        dist = (xTP[i][h] - xFP[i][h])
-        conf_setting = i"""
-
-print("Low limit: " + str(100*conf_setting*step) + "%")
-print("Score setting: " + str(weight_struct[weight_setting]))
-
-
-
-"""    
-for i in range(len(TP_iter)):
-    for h in range(score_iterations):
-        xTP.append(round(100*TP_iter[i][h]/(TP_iter[i][h] + FN_iter[i][h]), 1))
-        xFN.append(round(100*FN_iter[i][h]/(TP_iter[i][h] + FN_iter[i][h]), 1))
-        xTN.append(round(100*TN_iter[i][h]/(TN_iter[i][h] + FP_iter[i][h]), 1))
-        xFP.append(round(100*FP_iter[i]/(TN_iter[i][h] + FP_iter[i][h]), 1))"""
-
-
-
-
-"""
-for i in range(int(1/step)):   
+            # Converts the S/N-DM plot into a probability frequency plot
+            # Instead of each point in DM space having a corresponding S/N y-value
+            # there will be an array containing a number of DM elements proportional to its S/N value
+            for i in range(len(signalToDm)):
+                temp_arr = []
+                frequency = int(signalToDm[i][1]*1000)      # Needs to be an integer, timed it by 1000 to reduce rounding errors, proportions still same
+                temp_arr = [signalToDm[i][0]] * frequency   # Creates the corresponding number of elements and adds it to the array
+                freq_arr.extend(temp_arr)
+            
+            
+            diff_SN = max(s_meanSN) - (0.5*s_meanSN[0] + 0.5*s_meanSN[-1])
+            diff_DM = s_meanDM[-1] - s_meanDM[0] #?????center this around peak
+            
+            sharp_ratio = diff_SN/(diff_SN + diff_DM) #height/width
+            shape_conf = rating/max_score
+            
+            skewness = skew(freq_arr, axis = 0)
+            kurt = kurtosis(freq_arr, axis = 0, fisher = True)
+            
+            freq_scaled = preprocessing.scale(freq_arr)
+            ks_stat = ks_cordes(signalToDm[:,0],signalToDm[:,1],labels_arr[q][:,1],meanDM[max_ind])
+            
+            shape_vals.append(shape_conf)
+            sharp_vals.append(sharp_ratio)
+            skew_vals.append(skewness)
+            kurt_vals.append(kurt)
+            kstest_vals.append(ks_stat)
+            cand_paths.append(FILE)
+            
+            if (counter in pos_array):
+                class_vals.append(1)
+            else:
+                class_vals.append(0)
     
-    #rates?
-    T_pos.append(round(100*true_pos[i]/(true_pos[i] + false_neg[i]), 1))
-    F_neg.append(round(100*false_neg[i]/(true_pos[i] + false_neg[i]), 1))
-    T_neg.append(round(100*true_neg[i]/(true_neg[i] + false_pos[i]), 1))
-    F_pos.append(round(100*false_pos[i]/(true_neg[i] + false_pos[i]), 1))"""
+
+dataframe = pd.DataFrame({'Shape Feature': shape_vals,
+                          'Sharp Feature': sharp_vals,
+                          'Skewness': skew_vals,
+                          'Kurtosis': kurt_vals,
+                          'KS-test stat': kstest_vals,
+                          'Label': class_vals,
+                          'Candidate paths: ': cand_paths})
+
+dataframe.to_csv("feature_table.csv")
 
 
+         
+    
