@@ -138,7 +138,9 @@ oskar_meanSN = [None]*2
 chris_width = [None]*2
 oskar_width = [None]*2
 
+
 for i in range(0,72): 
+
     print(i)
     para = 0
     path=i
@@ -175,8 +177,10 @@ for i in range(0,72):
     
     X_scaled = preprocessing.MinMaxScaler().fit_transform(points_new) #Rescales the data so that the x- and y-axes get ratio 1:1
     
+
     xeps = 0.025     # Radius of circle to look around for additional core points
     xmin = 3         # Number of points within xeps for the point to count as core point
+
     
     clusters = DBSCAN(eps=xeps, min_samples = xmin, n_jobs = -1).fit_predict(X_scaled)  
     #plt.scatter(X_scaled[:, 1], X_scaled[:, 0], c=clusters, cmap="Paired", alpha = 0.4, vmin = -1, s = 15)
@@ -391,7 +395,7 @@ for i in range(0,72):
                 oskar_tot[1] = round(tot_conf,2)
                 oskar_width[1] = xwidth
                 
-            """
+
             fig = plt.figure()
             ax1 = fig.add_subplot(111)
             ax1.bar(meanDM,meanSN, align='center',width=xwidth, alpha=0.2)
@@ -407,7 +411,7 @@ for i in range(0,72):
 
             ax.set_xlabel("DM")
             ax.set_ylabel("S/N")
-            plt.show()"""
+            plt.show()
             
             """
             if ((tot_conf >= conf_lim) and (counter in pos_array)):
@@ -417,8 +421,8 @@ for i in range(0,72):
             elif ((tot_conf < conf_lim) and (counter not in pos_array)):
                 true_neg += 1
             elif ((tot_conf < conf_lim) and (counter in pos_array)):
-                false_neg += 1"""
-            
+                false_neg += 1
+            """
     #Re-order        
     labels_arr = clusterSort(clusters, points)
     clusterOrder(clusters)                
@@ -473,12 +477,13 @@ for i in range(0,72):
             for i in range(len(clusters)):
                 if (clusters[i] == q - 1):
                     clusters[i] = -1"""
-                    
+    """               
     labs = ["one", "two", "three", "four", "five"]
     for m in labels_arr[0]:
         rfi.append(m)
-    
+
     fig = plt.figure()
+
     ax = fig.add_subplot(111)
     
     rejected = np.array(rejected)
@@ -519,6 +524,8 @@ tr_pos = round(100*true_pos/len(pos_array), 1)
 fl_neg = 100 - round(100*true_pos/len(pos_array), 1)
 tr_neg = round(100*true_neg/(counter - len(pos_array)), 1)
 fl_pos = round(100*false_pos/(counter - len(pos_array)), 1)"""
+
+"""       
 
 oskar = np.array(oskar)
 chris = np.array(chris)
@@ -579,10 +586,13 @@ ax1.bar(x_val, conf_D, bottom = bot_D, label = "Rejected")
 ax1.bar(x_val, conf_C, bottom = bot_C, label = "Least acceptable")
 ax1.bar(x_val, conf_B, bottom = bot_B, label = "Good")
 ax1.bar(x_val, conf_A, bottom = bot_A, label = "Excellent")
+
 plt.legend()"""
+
 
 """
 print("True positive: " + str(tr_pos) + "%")
 print("True negative: " + str(tr_neg) + "%")
 print("False positive: " + str(fl_pos) + "%")
-print("False negative: " + str(fl_neg) + "%")"""
+print("False negative: " + str(fl_neg) + "%")
+"""
