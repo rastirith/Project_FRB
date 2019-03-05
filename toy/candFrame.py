@@ -2,33 +2,34 @@ import tkinter as tk
 import numpy as np
 import pandas as pd
 from matplotlib.figure import Figure
-from matplotlib import pyplot as plt
+#from matplotlib import pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from globalDef import candPlot
-
+#from globalDef import candPlot
+np.set_printoptions(linewidth = 100)
 fontx = ('Helvetica', 8)
 class_colours = ["b", "m", "r"]
 
 class candClass(tk.Frame):
     
-    review_ind_frb = 0
-    review_ind_nfrb = 0
-    choice = 0
-    current_choice = []
-    xref = 0
-    yref = 0
-    frb_paths = []
-    nfrb_paths = []
-    excellent = []
-    good = []
-    least_acc = []
+    review_ind_frb = 0      # Keeps track of which index in the FRB-folder the user is currently at
+    review_ind_nfrb = 0     # Keeps track of which index in the nFRB-folder the user is currently at
+    choice = 0              # Variable indicating whether user is displaying candidates or non-candidates
+    current_choice = []     # Folder containing paths of the current FRB or nFRB files.
+    xref = 0                # User's chosen x-dimension
+    yref = 0                # User's chosen y-dimension
+    frb_paths = []          # Paths of all FRB candidates
+    nfrb_paths = []         # Paths of all non-candidates
+    excellent = []          # All points with an "excellent" classification in the current file
+    good = []               # All points with a "good" classification in the current file
+    least_acc = []          # All points with a "least acceptable" classification in the current file
+    candidates = []         # Array of arrays, where each position index corresponds to a separate candidate.
     
-    axes = []
-    grayAx = None
-    candAx = None
-    candFig = None
-    showVar = 0
+    axes = []               # Folder containing the axes of the displayed figure, needed to that a single axis can be hidden/removed
+    grayAx = None           # Axis displaying all the gray points
+    candAx = None           # Axis of underlying figure   
+    candFig = None          # Underlying figure
+    showVar = 0             # Variable indicating whether classification are being highlighted or not. 1 = Shown, 0 = Hidden.
 
     
     def __init__(self, master, controller):
@@ -50,6 +51,7 @@ class candClass(tk.Frame):
         self.menuobj()
         self.labels()
         self.textbox()
+        
     
     # Method defining the drop down menu part of the GUI
     def menuobj(self):
@@ -72,8 +74,8 @@ class candClass(tk.Frame):
     def labels(self):
         #self.canvasPlot(xref2, yref2)   #Shows the first plot of the data set as default at start-up
         self.emptycanvas()
-        tk.Label(self, text = "X:", font = "Helvetica 9 bold").grid(row = 11, column = 54)
-        tk.Label(self, text = "Y:", font = "Helvetica 9 bold").grid(row = 12, column = 54)
+        tk.Label(self, text = "Y:", font = "Helvetica 9 bold").grid(row = 11, column = 54)
+        tk.Label(self, text = "X:", font = "Helvetica 9 bold").grid(row = 12, column = 54)
         
     # Method defining the textbox part of the GUI
     def textbox(self):
@@ -113,7 +115,7 @@ class candClass(tk.Frame):
                           variable=x, 
                           value=val,
                           command = rdbchange,
-                          font = fontx).grid(row = 11, column = 56 + val)
+                          font = fontx).grid(row = 12, column = 56 + val)
         
         # Radiobutton allowing the user to choose what data to display on the y-axis of the plot
         for val, datatypes2 in enumerate(datatypes2):
@@ -123,7 +125,7 @@ class candClass(tk.Frame):
                           variable=y, 
                           value=val,
                           command = rdbchange,
-                          font = fontx).grid(row = 12, column = 56 + val)
+                          font = fontx).grid(row = 11, column = 56 + val)
         
         # Button to display the plot defined by user's choice of x- and y-values
         self.show_button = tk.Button(self, text = "Show", command = lambda: self.canvasPlot(candClass.xref, candClass.yref))
@@ -172,7 +174,19 @@ class candClass(tk.Frame):
                 candClass.review_ind_frb += 1
             else:
                 candClass.review_ind_nfrb += 1
-            self.canvasPlot(current_choice,xref,yref)
+            self.newLabArr()
+            if self.showVar == 1:
+                self.showVar = 0
+                self.drawGray(xref, yref)
+                self.candData(xref,yref)
+                self.canvas = FigureCanvasTkAgg(self.candFig, self)
+                self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+                self.canvas.mpl_connect("button_press_event", self.callback)
+            else: 
+                self.drawGray(xref, yref)
+                self.canvas = FigureCanvasTkAgg(self.candFig, self)
+                self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+
         
     def Left(self):
         if candClass.choice == 1:
@@ -180,7 +194,6 @@ class candClass(tk.Frame):
         else:
             review_ind = candClass.review_ind_nfrb
 
-        current_choice = candClass.current_choice
         xref = candClass.xref
         yref = candClass.yref
         
@@ -191,7 +204,19 @@ class candClass(tk.Frame):
                 candClass.review_ind_frb -= 1
             else:
                 candClass.review_ind_nfrb -= 1
-            self.canvasPlot(current_choice,xref,yref)
+            self.newLabArr()
+            if self.showVar == 1:
+                self.showVar = 0
+                self.drawGray(xref, yref)
+                self.candData(xref,yref)
+                self.canvas = FigureCanvasTkAgg(self.candFig, self)
+                self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+                self.canvas.mpl_connect("button_press_event", self.callback)
+            else: 
+                self.drawGray(xref, yref)
+                self.canvas = FigureCanvasTkAgg(self.candFig, self)
+                self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+            
 
     #Exits client
     def client_exit(self):
@@ -207,54 +232,40 @@ class candClass(tk.Frame):
             self.frb_button.config(relief="sunken")
             self.nfrb_button.config(relief="raised")
             candClass.current_choice = candClass.frb_paths
-            self.canvasPlot(candClass.current_choice,xref,yref)
+            self.newLabArr()
+            self.canvasPlot(xref,yref)
             
         else:
             self.nfrb_button.config(relief="sunken")
             self.frb_button.config(relief="raised")
             candClass.current_choice = candClass.nfrb_paths
-            self.canvasPlot(candClass.current_choice,xref,yref)
+            self.canvasPlot(xref,yref)
         
-    def canvasPlot(self, folder, xref, yref):
+    def canvasPlot(self, xref, yref):
         if candClass.choice == 1:
-            review_ind = self.review_ind_frb
+            candClass.current_choice = candClass.frb_paths
         else:
-            review_ind = self.review_ind_nfrb
+            candClass.current_choice = candClass.nfrb_paths
         
-        temp = candPlot(folder[review_ind],xref,yref)
-        candClass.candFigNC = temp[0]
-        candClass.candFigC = temp[1]
-        self.drawGray(xref, yref)
-        self.canvas = FigureCanvasTkAgg(self.candFig, self)
-        #candPlot(folder[review_ind],xref,yref)
-        self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+        if self.showVar == 1:
+            self.showVar = 0
+            self.drawGray(xref, yref)
+            self.candData(xref,yref)
+            self.canvas = FigureCanvasTkAgg(self.candFig, self)
+            self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+            self.canvas.mpl_connect("button_press_event", self.callback)
+        else: 
+            self.drawGray(xref, yref)
+            self.canvas = FigureCanvasTkAgg(self.candFig, self)
+            self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+
     
     def candData(self, xref, yref):
         
-        
         if self.showVar == 0:
+            
             self.class_btn.config(text = "Hide classifications")
             self.grayAx.set_label('RFI/Background')
-            candFile = self.current_choice[self.review_ind_frb].replace('.dat','_c.csv')
-            dataset = pd.read_csv(candFile)
-        
-            X = dataset.iloc[:,1:6].values
-            X = np.array(X)
-            
-            self.excellent = []
-            self.good = []
-            self.least_acc = []
-            
-            for i in range(len(X[:,4])):
-                if X[:,4][i] == 3:
-                    self.excellent.append(X[i])
-                elif X[:,4][i] == 2:
-                    self.good.append(X[i])
-                elif X[:,4][i] == 1:
-                    self.least_acc.append(X[i])
-            self.excellent = np.array(self.excellent)
-            self.good = np.array(self.good)
-            self.least_acc = np.array(self.least_acc)
     
             if len(self.excellent) > 0:
                 self.axes.append(self.candAx.scatter(self.excellent[:,xref], self.excellent[:,yref], color = "r", alpha = 1, vmin = -1, s = 6, label = "Excellent"))
@@ -265,6 +276,8 @@ class candClass(tk.Frame):
             self.candAx.legend()
             self.canvas = FigureCanvasTkAgg(self.candFig, self)
             self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+            self.canvas.mpl_connect("button_press_event", self.callback)
+            #print("Heeeeeeeeeey")
             self.showVar = 1
         else:
             if len(self.axes) > 0:
@@ -292,6 +305,7 @@ class candClass(tk.Frame):
         self.canvas = FigureCanvasTkAgg(self.candFig, self)
         self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
         self.axes = []
+        
     def drawGray(self, xref, yref):
         
         if candClass.choice == 1:
@@ -329,3 +343,56 @@ class candClass(tk.Frame):
         ax.set_xlim(left = 0) #Sets lower x-limit to zero
         self.canvas = FigureCanvasTkAgg(fig, self)
         self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
+        
+    def newLabArr(self):
+        
+        candFile = self.current_choice[self.review_ind_frb].replace('.dat','_c.csv')
+        dataset = pd.read_csv(candFile)
+    
+        X = dataset.iloc[:,0:6].values
+        X = np.array(X)
+
+        self.excellent = []
+        self.good = []
+        self.least_acc = []
+        
+        for i in range(len(X[:,4])):
+            if X[:,4][i] == 3:
+                self.excellent.append(X[i])
+            elif X[:,4][i] == 2:
+                self.good.append(X[i])
+            elif X[:,4][i] == 1:
+                self.least_acc.append(X[i])
+        self.excellent = np.array(self.excellent)
+        self.good = np.array(self.good)
+        self.least_acc = np.array(self.least_acc)
+
+        
+        numCand = len(set(X[:,5]))
+        self.candidates = []
+        
+        for i in range(numCand):
+            temp = []
+            for k in range(len(X[:,5])):
+                if X[:,5][k] == i:
+                    temp.append(X[k])
+            temp = np.array(temp)
+            self.candidates.append(temp)
+            
+        self.candidates = np.array(self.candidates)
+        
+        
+    # Callback function for mouse click events. 
+    def callback(self, event):
+        
+        for i in range(len(self.candidates)):
+            
+            x = self.candidates[i][:,self.xref]
+            y = self.candidates[i][:,self.yref]
+    
+            xy_pixels = self.candAx.transData.transform(np.vstack([x,y]).T)
+            xpix, ypix = xy_pixels.T
+            
+            if ((event.y < np.amax(ypix) + 5) and (event.y > np.amin(ypix) - 5) and (event.x < np.amax(xpix) + 5) and (event.x > np.amin(xpix) - 5)):
+                print("hit")
+                break

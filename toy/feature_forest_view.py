@@ -129,7 +129,7 @@ kstest_vals = []
 class_vals = []
 
 
-for i in range(0,4): 
+for i in range(0,72): 
     print(i)
     start = timer()
     para = 0
@@ -163,7 +163,7 @@ for i in range(0,4):
     xeps = 0.025     # Radius of circle to look around for additional core points
     xmin = 3         # Number of points within xeps for the point to count as core point
     
-    clusters = DBSCAN(eps=xeps, min_samples = xmin, n_jobs = -1).fit_predict(X_scaled)  
+    clusters = DBSCAN(eps=xeps, min_samples = xmin).fit_predict(X_scaled)  
     
     # Re-inserts bottom points with labels -1 for RFI
     length = len(points) - len(clusters)
@@ -210,6 +210,7 @@ for i in range(0,4):
     least_acc = []
     good = []
     excellent = []
+    labelNumber = 0
 
 
     # Condition for peak location
@@ -331,16 +332,19 @@ for i in range(0,4):
             
             features = [shape_conf, sharp_ratio, skewness, kurt, ks_stat]
             results = clf.predict_proba([features])
-            #print(results)
+
             if (results[0][1] > 0.8):
                 for m in labels_arr[q]:
-                    excellent.append(m)
+                    excellent.append(np.append(m,labelNumber))
+                labelNumber += 1
             elif (results[0][1] > 0.65):
                 for m in labels_arr[q]:
-                    good.append(m)
+                    good.append(np.append(m,labelNumber))
+                labelNumber += 1
             elif (results[0][1] > 0.5):
                 for m in labels_arr[q]:
-                    least_acc.append(m)
+                    least_acc.append(np.append(m,labelNumber))
+                labelNumber += 1
             
             if (counter in pos_array):
                 class_vals.append(1)
@@ -359,17 +363,17 @@ for i in range(0,4):
     if_var = 0
     
     if (len(excellent) > 0):
-        excellent_c = np.full((len(excellent),5), 3, dtype = float)
+        excellent_c = np.full((len(excellent),6), 3, dtype = float)
         excellent_c[:,:-1] = excellent
         total.extend(excellent_c)
         if_var += 1
     if (len(good) > 0):
-        good_c = np.full((len(good),5), 2, dtype = float)
+        good_c = np.full((len(good),6), 2, dtype = float)
         good_c[:,:-1] = good
         total.extend(good_c)
         if_var += 1
     if (len(least_acc) > 0):
-        least_acc_c = np.full((len(least_acc),5), 1, dtype = float)
+        least_acc_c = np.full((len(least_acc),6), 1, dtype = float)
         least_acc_c[:,:-1] = least_acc
         total.extend(least_acc_c)
         if_var += 1
@@ -381,10 +385,11 @@ for i in range(0,4):
                                   'Time': total[:,1],
                                   'S/N': total[:,2],
                                   'Width': total[:,3],
-                                  'Class': total[:,4]})
+                                  'Class': total[:,5],
+                                  'Cluster Number': total[:,4]})
         
         new_name = source_paths[path].split("idir\\")[1].replace('.dat','_c.csv')
-        dataframe.to_csv(os.getcwd() + '\\idir\\' + "\\candidates\\" + new_name)
+        dataframe.to_csv(os.getcwd() + '\\idir\\' + "\\candidates\\" + new_name, index = False)
         new_path = os.getcwd() + '\\idir\\' + "\\candidates\\" + source_paths[path].split("idir\\")[1]
         
         if (os.path.isfile(new_path)) == False:

@@ -58,8 +58,8 @@ class main_frame(tk.Frame):
         global progress
 
         self.canvasupdate(xref, yref)   #Shows the first plot of the data set as default at start-up
-        tk.Label(self, text = "X:", font = "Helvetica 9 bold").grid(row = 11, column = 54)
-        tk.Label(self, text = "Y:", font = "Helvetica 9 bold").grid(row = 12, column = 54)
+        tk.Label(self, text = "Y:", font = "Helvetica 9 bold").grid(row = 11, column = 54)
+        tk.Label(self, text = "X:", font = "Helvetica 9 bold").grid(row = 12, column = 54)
         
         # Progress bar displaying fraction of classified files
         progress = ttk.Progressbar(self, orient="horizontal",length=100,mode='determinate')
@@ -105,7 +105,7 @@ class main_frame(tk.Frame):
                           variable=x, 
                           value=val,
                           command = rdbchange,
-                          font = fontx).grid(row = 11, column = 56 + val)
+                          font = fontx).grid(row = 12, column = 56 + val)
         
         # Radiobutton allowing the user to choose what data to display on the y-axis of the plot
         for val, datatypes2 in enumerate(datatypes2):
@@ -115,7 +115,7 @@ class main_frame(tk.Frame):
                           variable=y, 
                           value=val,
                           command = rdbchange,
-                          font = fontx).grid(row = 12, column = 56 + val)
+                          font = fontx).grid(row = 11, column = 56 + val)
         
         # Button to display the plot defined by user's choice of x- and y-values
         self.show_button = tk.Button(self, text = "Show", command = lambda: self.canvasupdate(main_frame.xref, main_frame.yref))

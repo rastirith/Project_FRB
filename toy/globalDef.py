@@ -72,7 +72,7 @@ def candPlot(path,xref,yref):
     file.close()
 
     candFile = path.replace('.dat','_c.csv')
-    file = open(candFile,'r')
+    #file = open(candFile,'r')
     dataset = pd.read_csv(candFile)
 
     X = dataset.iloc[:,1:6].values

@@ -56,8 +56,8 @@ class preview_frame(tk.Frame):
         
         #self.canvasupdate(xref2, yref2)   #Shows the first plot of the data set as default at start-up
         self.subplot_canv(xref,yref)
-        tk.Label(self, text = "X:", font = "Helvetica 9 bold").grid(row = 7, column = 54)
-        tk.Label(self, text = "Y:", font = "Helvetica 9 bold").grid(row = 8, column = 54)
+        tk.Label(self, text = "Y:", font = "Helvetica 9 bold").grid(row = 7, column = 54)
+        tk.Label(self, text = "X:", font = "Helvetica 9 bold").grid(row = 8, column = 54)
         
     # Method defining the buttons available on the GUI
     def buttons(self):
@@ -92,7 +92,7 @@ class preview_frame(tk.Frame):
                           variable=x, 
                           value=val,
                           command = rdbchange,
-                          font = fontx).grid(row = 7, column = 58 + val)
+                          font = fontx).grid(row = 8, column = 58 + val)
         
         # Radiobutton allowing the user to choose what data to display on the y-axis of the plot
         for val, datatypes2 in enumerate(datatypes2):
@@ -102,7 +102,7 @@ class preview_frame(tk.Frame):
                           variable=y, 
                           value=val,
                           command = rdbchange,
-                          font = fontx).grid(row = 8, column = 58 + val)
+                          font = fontx).grid(row = 7, column = 58 + val)
         
         # Button to display the plot defined by user's choice of x- and y-values
         self.show_button = tk.Button(self, text = "Show", command = lambda: self.subplot_canv(xref,yref))
