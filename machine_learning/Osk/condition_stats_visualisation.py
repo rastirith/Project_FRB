@@ -9,7 +9,7 @@ import os
 
 #opening stats file to dataframe
 
-file = (os.getcwd()+ '\\' + 'condition_stats_22')
+file = (os.getcwd()+ '\\' + 'condition_stats_17')
 
 df = pd.read_csv(file)
 #print(df)
