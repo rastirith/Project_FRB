@@ -189,7 +189,7 @@ for x in range(len(source_paths)):
         c_id= str(int(k))
         new_name= source_paths[x].split("candidates2\\")[1].replace("_c.csv","_m_"+c_id+".csv")
         
-        np.savetxt(os.getcwd()+"\matrix_files\\DM\\"+new_name, zero2)
+        np.savetxt(os.getcwd()+"\matrix_files\\DM\\"+new_name, zero3)
         
         
 print((n_s)) ###testing
