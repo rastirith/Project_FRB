@@ -136,7 +136,7 @@ for i in range(0,72):
     
     X_scaled = preprocessing.MinMaxScaler().fit_transform(points_new) #Rescales the data so that the x- and y-axes get ratio 1:1
     
-    xeps = 0.02    # Radius of circle to look around for additional core points
+    xeps = 0.005    # Radius of circle to look around for additional core points
     xmin = 5      # Number of points within xeps for the point to count as core point
     
     clusters = DBSCAN(eps=xeps, min_samples = xmin, n_jobs = -1).fit_predict(X_scaled)   
@@ -354,6 +354,6 @@ for i in range(0,72):
 #plt.hist(ratios,bins=10)
 #Writing to file
 
-df2.to_csv('condition_stats_22',index=False)
+df2.to_csv('condition_stats_23',index=False)
 
 
