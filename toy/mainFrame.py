@@ -49,7 +49,7 @@ class main_frame(tk.Frame):
         
         editmenu = tk.Menu(menu)
         editmenu.add_command(label = "Choose output directory...",command = self.client_exit)
-        menu.add_cascade(label = "View", menu = editmenu)
+        #menu.add_cascade(label = "View", menu = editmenu)
         
     # Method defining the Labels (including the canvas) part of the GUI
     def labels(self):
