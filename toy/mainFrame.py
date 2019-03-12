@@ -10,15 +10,16 @@ fontx = ('Helvetica', 8)
 
 class main_frame(tk.Frame):
     
-    source_paths = []
-    source_ind = 0
-    odir_path = ""
-    progcount = 0
-    length = 0
-    result_file = None
-    xref = 0
-    yref = 0
+    source_paths = []           # Paths to unclassified .dat files
+    source_ind = 0              # Current position index used in source_paths array
+    odir_path = ""              # Path to the output directory
+    progcount = 0               # Counts how many files that have been classified in the session
+    length = 0                  # Number of initially unclassified .dat files  
+    result_file = None          # File containing paths to classified .dat files
+    xref = 0                    # Indicates which axis is being used in the x-direction
+    yref = 0                    # Indicates which axis is being used in the y-direction
     
+    # Initialises the frame here 
     def __init__(self, master, controller):
        
         #MASTER FRAME THINGS HERE
@@ -53,13 +54,10 @@ class main_frame(tk.Frame):
         
     # Method defining the Labels (including the canvas) part of the GUI
     def labels(self):
-        xref = main_frame.xref
-        yref = main_frame.yref
-        global progress
 
-        self.canvasupdate(xref, yref)   #Shows the first plot of the data set as default at start-up
-        tk.Label(self, text = "Y:", font = "Helvetica 9 bold").grid(row = 11, column = 54)
-        tk.Label(self, text = "X:", font = "Helvetica 9 bold").grid(row = 12, column = 54)
+        self.canvasupdate(self.xref, self.yref)   # Plots the first .dat file in the directory as default
+        tk.Label(self, text = "Y:", font = "Helvetica 9 bold").grid(row = 11, column = 54)  # Y-label for y axis radiobuttons
+        tk.Label(self, text = "X:", font = "Helvetica 9 bold").grid(row = 12, column = 54)  # X-label for x axis radiobuttons
         
         # Progress bar displaying fraction of classified files
         progress = ttk.Progressbar(self, orient="horizontal",length=100,mode='determinate')
@@ -73,7 +71,6 @@ class main_frame(tk.Frame):
         self.S.config(command = self.T.yview)
         self.T.config(yscrollcommand = self.S.set)
         self.T.grid(row = 1,column = 56, rowspan = 10, columnspan = 40, sticky = "nw", padx = (0, 15))
-        #self.S.grid(row = 0,column = 9, rowspan = 5, sticky = "E")
     
     # Method defining the buttons available on the GUI
     def buttons(self):
@@ -90,9 +87,8 @@ class main_frame(tk.Frame):
         
         # Method called by the Radiobuttons to check and update the xref and yref values if they have changed
         def rdbchange():
-            #xref = main_frame.xref
-            #yref = main_frame.yref
             
+            # Only updates xref and yref if one or both have changed
             if ((y.get() != main_frame.yref) or (x.get() != main_frame.xref)):
                 main_frame.xref = x.get()
                 main_frame.yref = y.get()
@@ -145,56 +141,41 @@ class main_frame(tk.Frame):
         self.right_btn.grid(row = 50, column = 24, columnspan = 6, rowspan = 3, pady = (5,5), sticky = "nw")
         self.left_btn.grid(row = 50, column = 17, columnspan = 6, rowspan = 3, pady = (5,5), sticky = "nw")
         
+    # Method to display the next image in the path space
     def Right(self):
-        source_ind = main_frame.source_ind
-        source_paths = main_frame.source_paths
-        xref = main_frame.xref
-        yref = main_frame.yref
-        
-        if (source_ind >= (len(source_paths) - 1)):  # If at the end of the array don't try to go further
+        if (self.source_ind >= (len(self.source_paths) - 1)):  # If at the end of the array don't try to go further
             print("Reached end of files.")
-        else:
-            main_frame.source_ind += 1
-            self.canvasupdate(xref,yref)
-            
+        else:   # Increase the index by 1 and update the canvas accordingly
+            self.source_ind += 1
+            self.canvasupdate(self.xref,self.yref)
+    
+    # Method to display the previous image in the path space      
     def Left(self):
-        source_ind = main_frame.source_ind
-        xref = main_frame.xref
-        yref = main_frame.yref
-        
-        if (source_ind <= 0):   # If at the beginning on the array don't try to go further back
+        if (self.source_ind <= 0):   # If at the beginning on the array don't try to go further back
             print("At the first file already.")
-        else:
-            main_frame.source_ind -= 1
-            self.canvasupdate(xref,yref)
+        else:       # Decrease the index by 1 and update the canvas accordingly
+            self.source_ind -= 1
+            self.canvasupdate(self.xref,self.yref)
         
     #Changing image with left or right key
     def key1(self, event):
-        source_ind = main_frame.source_ind
-        source_paths = main_frame.source_paths
-        xref = main_frame.xref
-        yref = main_frame.yref
-        
-        print("besh")
-        
-        if event.keysym == 'Right':
-            if (source_ind >= (len(source_paths) - 1)):       # If at the end of the array don't try to go further
+
+        if event.keysym == 'Right':     # Right arrow pressed
+            if (self.source_ind >= (len(self.source_paths) - 1)):       # If at the end of the array don't try to go further
                 print("Reached end of files.")
-            else:
-                main_frame.source_ind += 1
-                self.canvasupdate(xref,yref)
-        elif event.keysym == 'Left':
-            if (source_ind <= 0):                     # If at the beginning on the array don't try to go further back
+            else:   # Increase the index by 1 and update the canvas accordingly
+                self.source_ind += 1
+                self.canvasupdate(self.xref,self.yref)
+        elif event.keysym == 'Left':    # Left arrow pressed
+            if (self.source_ind <= 0):                     # If at the beginning on the array don't try to go further back
                 print("At the first file already.")
-            else:
-                main_frame.source_ind -= 1
-                self.canvasupdate(xref,yref)
+            else:   # Decrease the index by 1 and update the canvas accordingly
+                self.source_ind -= 1
+                self.canvasupdate(self.xref,self.yref)
      
     # Updates the progress bar    
     def bar(self):
-        global progress
-        
-        progress['value']=main_frame.progcount*100/main_frame.length
+        self.progress['value']=main_frame.progcount*100/main_frame.length
 
     #Exits client
     def client_exit(self):
@@ -202,12 +183,6 @@ class main_frame(tk.Frame):
       
     #Method to put image in appropriate folder, make a note where that is, and change the image on display
     def frbchoice(self, folder, choice):
-        source_paths = main_frame.source_paths
-        source_ind = main_frame.source_ind
-        #global source_paths
-        xref = main_frame.xref
-        yref = main_frame.yref
-        
         main_frame.progcount += 1
         self.bar()
         
@@ -219,32 +194,32 @@ class main_frame(tk.Frame):
        
         #Adds path name and moves img to appropriate folder
         if (choice == 1):
-            os.rename(source_paths[source_ind],folder + "\\frb\\" + source_paths[source_ind].split("\\")[-1])
-            main_frame.result_file.write(folder + "\\frb\\" + source_paths[source_ind].split("\\")[-1] + "\n")
-            candClass.frb_paths.append(folder + "\\frb\\" + source_paths[source_ind].split("\\")[-1])
+            os.rename(self.source_paths[self.source_ind],folder + "\\frb\\" + self.source_paths[self.source_ind].split("\\")[-1])
+            self.result_file.write(folder + "\\frb\\" + self.source_paths[self.source_ind].split("\\")[-1] + "\n")
+            candClass.frb_paths.append(folder + "\\frb\\" + self.source_paths[self.source_ind].split("\\")[-1])
         else:
-            os.rename(source_paths[source_ind],folder + "\\no_frb\\" + source_paths[source_ind].split("\\")[-1])
-            main_frame.result_file.write(folder + "\\no_frb\\" + source_paths[source_ind].split("\\")[-1] + "\n")
-            candClass.nfrb_paths.append(folder + "\\no_frb\\" + source_paths[source_ind].split("\\")[-1])
+            os.rename(self.source_paths[self.source_ind],folder + "\\no_frb\\" + self.source_paths[self.source_ind].split("\\")[-1])
+            self.result_file.write(folder + "\\no_frb\\" + self.source_paths[self.source_ind].split("\\")[-1] + "\n")
+            candClass.nfrb_paths.append(folder + "\\no_frb\\" + self.source_paths[self.source_ind].split("\\")[-1])
             
   
         #Moves to next img
-        if ((source_ind >= (len(source_paths) - 1)) and (len(source_paths) != 1)):
-            if (len(source_paths) != 0):
-                main_frame.source_ind -= 1 
-                self.canvasupdate(xref,yref)
-                del main_frame.source_paths[main_frame.source_ind + 1]
+        # Goes in here if at the end of the files
+        if ((self.source_ind >= (len(self.source_paths) - 1)) and (len(self.source_paths) != 1)):
+            if (len(self.source_paths) != 0):       # If there are unclassified .dat files remaining then show previous files
+                self.source_ind -= 1 
+                self.canvasupdate(self.xref,self.yref)
+                del self.source_paths[self.source_ind + 1]
             print("Reached end of files.")
-        elif (len(source_paths) == 1):
+        elif (len(self.source_paths) == 1):         # Goes in here if this file was the last one, displays empty canvas
             self.canvas.delete("all")
-        else:
-            main_frame.source_ind += 1
-            self.canvasupdate(xref,yref)
-            del main_frame.source_paths[main_frame.source_ind - 1]
-            source_ind -= 1 
+        else:                                       # Goes in here if there are more .dat files after the current one, displays it
+            self.source_ind += 1
+            self.canvasupdate(self.xref,self.yref)
+            del main_frame.self.source_paths[self.source_ind - 1]
+            self.source_ind -= 1 
             
+    # Method to initialise a plot on the canvas
     def canvasupdate(self, xref, yref):
-        source_paths = main_frame.source_paths
-        source_ind = main_frame.source_ind
-        self.canvas = FigureCanvasTkAgg(plotimg(source_paths[source_ind],xref,yref), self)
+        self.canvas = FigureCanvasTkAgg(plotimg(self.source_paths[self.source_ind],xref,yref), self)
         self.canvas.get_tk_widget().grid(row = 0, column = 0, columnspan = 50, sticky = "nw", rowspan = 50)
