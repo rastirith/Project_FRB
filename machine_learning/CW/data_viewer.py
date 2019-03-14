@@ -24,7 +24,7 @@ for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
 
 width_max =[]
 w_u = []
-for i in range(0,70):    
+for i in range(0,72):    
     path=i
     print(i)
     #setting which file to open
@@ -32,10 +32,10 @@ for i in range(0,70):
     #getting df for test file
     df = DF(FILE)
     """print(df)"""
-    a=np.array(df["Width"])
+    a=np.array(df["Time"])
     b=np.unique(a)
     for i in range(len(b)):
         w_u.append(b[i])
-    width_max.append(df["Width"].max())
+    width_max.append(df["Time"].max())
 print("check")
-print(np.unique(w_u))
+print(max(np.unique(width_max)))
