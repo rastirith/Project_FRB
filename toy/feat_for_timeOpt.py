@@ -9,7 +9,8 @@ from scipy import stats
 from sklearn.cluster import DBSCAN
 from sklearn import preprocessing
 from scipy.stats import skew, kurtosis
-
+from timeit import default_timer as timer
+from matplotlib import pyplot as plt
 
 warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -29,6 +30,26 @@ def clusterOrder(clusterArr):
         clusterArr = np.where(clusterArr == lab_arr[n], n - 1, clusterArr)
     return clusterArr
 
+# Method to create an array of arrays where each index corresponds to a separate cluster
+def clusterSort(clusterArr, pointsArr):
+    temp_arr = []     # Array of arrays containing points for each label. e.g. labels_arr[0] contains all points with label -1
+    lab_arr = np.unique(clusterArr)
+    
+    for i in range(len(lab_arr)):       # Creates the array of arrays to be used
+        temp_list = []
+        temp_arr.append(temp_list)
+    
+    for i in range(len(clusterArr)):    # Loops through all points in the cluster label array
+        for q in range(len(lab_arr)):   # Loops through all indexes in the array of array
+            if (clusterArr[i] == lab_arr[q]):       # Puts all points with the same label, from the cluster label arrays, in
+                temp_arr[q].append(pointsArr[i])    # the same array at the same index
+                break
+    
+    for q in range(len(temp_arr)):          # Makes all arrays Numpy arrays
+        temp_arr[q] = np.array(temp_arr[q])
+    
+    temp_arr = np.array(temp_arr)           # Makes the array of arrays a Numpy array
+    return temp_arr
 
 # Creates dataframe for file
 def DF(path):
@@ -58,11 +79,14 @@ def ks_cordes(dmArr,snArr,timeArr,peakDmMean):
     zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*x       # Zeta function, see Cordes & M
     
     # Calculates the y-values of the theoretical function
+    startx = timer()
     for i in range(len(x)):
         cordes.append((math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i]))
-
+    endx = timer()
+    cordesTimes.append(endx - startx)
     altArr = []
 
+    startx = timer()
     # Creates prob. freq. representation of the SN distribution
     for i in range(len(snRatios)):
         temp_arr = []
@@ -70,15 +94,21 @@ def ks_cordes(dmArr,snArr,timeArr,peakDmMean):
         altArr.append(frequency)
         temp_arr = [dmScaled[i]] * frequency   # Creates the corresponding number of elements and adds it to the array
         snFreqArr.extend(temp_arr)
-
+    endx = timer()
+    ksDatProb.append(endx - startx)
+    startx = timer()
     # Creates prob. freq. representation of the cordes func.
     for i in range(len(cordes)):
         temp_arr = []
         frequency = int(cordes[i]*100)
         temp_arr = [x[i]] * frequency
         cordesFreqArr.extend(temp_arr)
-        
+    endx = timer()
+    ksTheProb.append(endx - startx)
+    startx = timer()
     statistic = stats.ks_2samp(snFreqArr,cordesFreqArr) #2D KS-test
+    endx = timer()
+    KSstat.append(endx - startx)
     return statistic[0]
 
 # Method to calculate and return the theoretical DM range span given a certain
@@ -115,6 +145,8 @@ def cordes(timeArr,peakSN):
     dm_range = top_dm - bot_dm              # Theoretical allowed DM range for the current candidate
     return dm_range
 
+clf = pickle.load(open("model.sav",'rb'))   # Loads the saved Random Forest model
+
 counter = 0     # Counter that counts the candidate number reaching the feature loop
 
 pos_array_mp3 = [
@@ -144,13 +176,43 @@ skew_vals = []      # Array containing the skewness feature values of the candid
 kurt_vals = []      # Array containing the kurtosis feature values of the candidates
 kstest_vals = []    # Array containing the ks-test feature values of the candidates
 class_vals = []     # Array containing the classification labels of the candidates
+CCount = 0          # Counter counting the number of candidates accepted
 
+
+timesPre = []
+timesScan = []
+timesOrder = []
+timesNoise = []
+timesFrac = []
+timesDmlim = []
+timesBurst = []
+clusterPre = []
+timesRange = []
+timesShape = []
+timesFreq = []
+timesRF = []
+timesClusterTot = []
+timesKS = []
+timesTot = []
+clusLoop = []
+totOrderTime = []
+
+ksDatProb = []
+ksTheProb = []
+KSstat = []
+cordesTimes = []
+
+timesPerMB = []
+firstOrd = []
+secondOrd = []
 
 # Loops through the whole file space defined by 'source_paths'
 for i in range(0,72): 
-    print(i)
-    
+    orderTime = 0
     fileSize = os.path.getsize(source_paths[i])/1024000
+    start2 = timer()
+    print(i)
+    start = timer()
     path_index = i      # Current path index in the source_paths array
     
     file = source_paths[path_index]     # Setting which file to open
@@ -174,17 +236,29 @@ for i in range(0,72):
     xeps = 0.025     # Radius of circle to look around for additional core points
     xmin = 3         # Number of points within xeps for the point to count as core point
     
+    end = timer()
+    timesPre.append(end - start)
+    start = timer()
+    
     clusters = DBSCAN(eps=xeps, min_samples = xmin).fit_predict(X_scaled)   # Clustering algorithm, returns array with cluster labels for each point
+    
+    end = timer()
+    timesScan.append(end - start)
 
     # Re-inserts bottom points with labels -1 for RFI
     length = len(points) - len(clusters)
     clusters = np.insert(clusters,0,np.full(length,-1))
     
-    # Adds column to the points arrays for cluster label
     newArr = np.column_stack((points, clusters[np.newaxis].T))
     
     # Re-order
+    startOrd = timer()
     newArr[:,4] = clusterOrder(newArr[:,4])
+    endOrd = timer()
+    timesOrder.append(endOrd - startOrd)
+    orderTime += endOrd - startOrd
+    
+    start = timer()
     
     # Noise condition for Nevents<Nmin => noise
     N_min = 20 # Tuneable number (set to match Karako)
@@ -194,15 +268,24 @@ for i in range(0,72):
         labSlice = np.extract(newArr[:,4] == label, newArr[:,4])
         if (len(labSlice) < N_min):        # Gives points of clusters with less than N_min events the RFI lable of -1
             newArr[:,4] = np.where(newArr[:,4] == label, -1, newArr[:,4])
+              
+    end = timer()
+    timesNoise.append(end - start)
     
     # Re-order    
+    startOrd = timer()
     newArr[:,4] = clusterOrder(newArr[:,4])
+    endOrd = timer()
+    timesOrder.append(endOrd - startOrd)
+    orderTime += endOrd - startOrd
     
     # Break
     dm_lim = 40         # Increased DM-limit to check for clusters with 'fraction' of their points below this limit
     fraction = 0.05     # Size of the fraction of points allowed in below 'dm_lim'
-
+    
+    start = timer()
     # Condition that sets all clusters with 'fraction' of its points below dm_lim to also be classified as RFI
+    
     labels = np.unique(newArr[:,4])
     for q in range(1,len(labels)):
         label = labels[q]
@@ -212,12 +295,23 @@ for i in range(0,72):
         if ((len(temp) > 0) and (max(temp) < dm_lim)):          # If the highest number in temp is below dm_lim then so is the rest in 'temp'
             newArr[:,4] = np.where(newArr[:,4] == label, -1, newArr[:,4])
 
-    # Condition that sets all points with dm below dm_lim to be classified as RFI
-    newArr[:,4][newArr[:,0] < dm_lim] = -1
-
+            
+    end = timer()
+    timesFrac.append(end - start)
+     
+    start = timer()              
+    newArr[:,4][newArr[:,0] < dm_lim] = -1  # Condition that sets all points with dm below dm_lim to be classified as RFI   
+    end = timer()
+    timesDmlim.append(end - start)
+    
     # Re-order    
+    startOrd = timer()
     newArr[:,4] = clusterOrder(newArr[:,4])
+    endOrd = timer()
+    timesOrder.append(endOrd - startOrd)
+    orderTime += endOrd - startOrd
 
+    start = timer()
     # Burst duration condition
     labels = np.unique(newArr[:,4])
     for q in range(1,len(labels)):
@@ -226,9 +320,17 @@ for i in range(0,72):
         lower = np.quantile(newArr[newArr[:,4] == label][:,1], 0.2)
         if (upper - lower) >= 1:            # If the time between the quantiles is longer than 1s set cluster to RFI
             newArr[:,4] = np.where(newArr[:,4] == label, -1, newArr[:,4])
+            
+    end = timer()
+    timesBurst.append(end - start)
+    #break
 
     # Re-order    
+    startOrd = timer()
     newArr[:,4] = clusterOrder(newArr[:,4])
+    endOrd = timer()
+    timesOrder.append(endOrd - startOrd)
+    orderTime += endOrd - startOrd
     
     least_acc = []      # Contains the points of all candidates classified as 'least acceptable'
     good = []           # Contains the points of all candidates classified as 'good'
@@ -236,14 +338,17 @@ for i in range(0,72):
     labelNumber = 0     # Label number of clusters in same files, used to separate multiple clusters of equal classification
 
     # Loops through all remaining clusters to exclude further clusters, calculate feature values, and classify them using Random Forest
+    startLoop = timer()
     labels = np.unique(newArr[:,4])
     for q in range(1,len(labels)):
-    
+        start1 = timer()
+        
         label = labels[q]
         dmData = newArr[newArr[:,4] == label][:,0]
         timeData = newArr[newArr[:,4] == label][:,1]
         snData = newArr[newArr[:,4] == label][:,2]
         
+        start = timer()
         signalToDm = list(zip(dmData, snData))  # Array containing DM - SN data
         signalToDm = np.array(signalToDm)
         min_val = min(signalToDm[:,1])                                  # Finds the lowest SN-value in the candidate array
@@ -269,21 +374,32 @@ for i in range(0,72):
             meanDM.append(tempDM)
         
         max_val = max(meanSN + min_val) # Array containing the real (not reduced) peak SN values in each chunk
+        
         max_ind = np.argmax(meanSN)     # Finds the index for the highest SN bin value
         peakMeanDm = meanDM[max_ind]    # The corresponding DM for this bin value
         
+        end = timer()
+        clusterPre.append(end - start)
+        start = timer()
+        
         upper_dm_range = cordes(timeData, meanSN[max_ind]) # The theoretically widest allowed DM range of candidate
         dm_diff = max(dmData) - min(dmData)  # The DM range spanned by the actual data
-
+        end = timer()
+        timesRange.append(end - start)
         # Condition that excludes the candidates with SN peaks too far from the centre, as well as candidates spanning a range that is too wide
         # Using 2 times the upper_dm_range to use a large safety margin
         if (max_ind > 4) or (max_ind < 2) or (dm_diff > 2*upper_dm_range):  
             newArr[:,4] = np.where(newArr[:,4] == label, -1, newArr[:,4])
-    
+
+            end2 = timer()
+            timesTot.append(end2 - start2)
+        
         # All candidates that haven't been excluded thus far go in here
         else:
             counter += 1        # Final candidate number reaching this point
             freq_arr = []       # Probability frequency distribution representation of the DM - SN data
+            
+            start = timer()
             weight_1 = -1       # Score weight if ratio is less than 1 but more than 1 - check_1
             weight_2 = -0.3     # Score weight if ratio is less than 1 - check_1, but more than 1 - check_2
             weight_3 = 1        # Score weight if ratio is less than 1 - check_2
@@ -292,6 +408,7 @@ for i in range(0,72):
             check_2 = 0.15
             score = [0,1.3,2.5,2.5]                         # Scoring system where one index step corresponds to one step from peak bin
             max_score = 2*(score[0] + score[1] + score[2])  # Maximum possible score
+            
             rating = 0  # Rating score after weight and scores have been applied
             
             for i in range(max_ind - 1, -1, -1):                # Loops through all bins from the peak bin moving to the left
@@ -321,7 +438,10 @@ for i in range(0,72):
             # Exception case where rating is less than 0, sets rating to 0 if this happens
             if rating < 0:
                 rating = 0
-
+            end = timer()
+            timesShape.append(end - start)
+            
+            start = timer()
             # Converts the S/N-DM plot into a probability frequency plot
             # Instead of each point in DM space having a corresponding S/N y-value
             # there will be an array containing a number of DM elements proportional to its S/N value
@@ -331,12 +451,18 @@ for i in range(0,72):
                 frequency = int((normal_snRatios[i])*1000)      # Needs to be an integer, timed it by 1000 to reduce rounding errors, proportions still same
                 temp_arr = [signalToDm[i][0]] * frequency   # Creates the corresponding number of elements and adds it to the array
                 freq_arr.extend(temp_arr)
-
+            end = timer()
+            timesFreq.append(end - start)
+            
             # FEATURES
             shape_conf = rating/max_score                       # Shafe conf feature
             skewness = skew(freq_arr, axis = 0)                 # Skewness feature
             kurt = kurtosis(freq_arr, axis = 0, fisher = True)  # Kurtosis feature
+            
+            start = timer ()
             ks_stat = ks_cordes(signalToDm[:,0],signalToDm[:,1],timeData,meanDM[max_ind])     # KS feature
+            end = timer()
+            timesKS.append(end - start)
             
             # Adds the feature values to the corresponding arrays
             shape_vals.append(shape_conf)
@@ -344,23 +470,177 @@ for i in range(0,72):
             kurt_vals.append(kurt)
             kstest_vals.append(ks_stat)
             
-            # Saves the classification label of the cluster to the class_vals array
+            features = [shape_conf, 0, skewness, kurt, ks_stat]       # Arrays of features to be ran through Random Forest model
+            start = timer()
+            results = clf.predict_proba([features])                             # Runs Random Forest model on features arrays
+            end = timer()
+            timesRF.append(end - start)
+            
+            timeDiff = upper - lower
+            
+            end1 = timer()
+            timesClusterTot.append(end1 - start1)
+            end2 = timer()
+            timesTot.append(end2 - start2)
+            timesPerMB.append((end2 - start2)/fileSize)
+
+            if (results[0][1] > 0.8):       # If the final rating from Random Forest is more than 0.8 goes in here
+                labNumArray = np.full((len(dmData), 1), labelNumber)
+                tempCandArr = np.column_stack((newArr[newArr[:,4] == label], labNumArray))
+                excellent.extend(tempCandArr)
+                labelNumber += 1
+                CCount += 1
+                
+                """
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
+                ax.scatter(signalToDm[:,0], signalToDm[:,1], s = 6)
+                ax.set_title(str(counter))
+    
+                fig1 = plt.figure()
+                ax1 = fig1.add_subplot(111)
+                ax1.scatter(points[:,1], points[:,0], s = 6, color = '0.7', vmin = -1)
+                ax1.scatter(timeData, dmData, s = 6, color = 'r', vmin = -1)
+                ax1.set_title(str(i))
+                ax1.set_xlabel(str(timeDiff))"""
+                
+            elif (results[0][1] > 0.65):    # If the final rating from Random Forest is more than 0.65 but less than 0.8, goes in here
+                labNumArray = np.full((len(dmData), 1), labelNumber)
+                tempCandArr = np.column_stack((newArr[newArr[:,4] == label], labNumArray))
+                good.extend(tempCandArr)
+                labelNumber += 1
+                CCount += 1
+                
+                """
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
+                ax.scatter(signalToDm[:,0], signalToDm[:,1], s = 6)
+                ax.set_title(str(counter))
+                
+                fig1 = plt.figure()
+                ax1 = fig1.add_subplot(111)
+                ax1.scatter(points[:,1], points[:,0], s = 6, color = '0.7', vmin = -1)
+                ax1.scatter(timeData, dmData, s = 6, color = 'r', vmin = -1)
+                ax1.set_title(str(i))
+                ax1.set_xlabel(str(timeDiff))"""
+                
+            elif (results[0][1] > 0.5):     # If the final rating from Random forest is more than 0.5 but less than 0.65, goes in here
+                labNumArray = np.full((len(dmData), 1), labelNumber)
+                tempCandArr = np.column_stack((newArr[newArr[:,4] == label], labNumArray))
+                least_acc.extend(tempCandArr)
+                labelNumber += 1
+                CCount += 1
+                
+                """
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
+                ax.scatter(signalToDm[:,0], signalToDm[:,1], s = 6)
+                ax.set_title(str(counter))
+    
+                fig1 = plt.figure()
+                ax1 = fig1.add_subplot(111)
+                ax1.scatter(points[:,1], points[:,0], s = 6, color = '0.7', vmin = -1)
+                ax1.scatter(timeData, dmData, s = 6, color = 'r', vmin = -1)
+                ax1.set_title(str(i))
+                ax1.set_xlabel(str(timeDiff))"""
+            
+            #plt.show()
+            #break
+            # Adds the correct class label for the cluster to the class_vals array.
             # 1 = candidate, 0 = no candidate
             if (counter in pos_array):
                 class_vals.append(1)
             else:
                 class_vals.append(0)
+    endLoop = timer()
+    clusLoop.append(endLoop - startLoop)
+    # Re-order    
+    startOrd = timer()
+    newArr[:,4] = clusterOrder(newArr[:,4])
+    endOrd = timer()
+    timesOrder.append(endOrd - startOrd)
+    orderTime += endOrd - startOrd
+    totOrderTime.append(orderTime)
+    
+print(CCount)
+print(counter)
+
+print("Preprocessing: " + str(np.round(np.mean(timesPre), 4)) + "s")
+print("DBScan: " + str(np.round(np.mean(timesScan), 4)) + "s")
+print("Re-ordering: " + str(np.round(np.mean(timesOrder), 4)) + "s")
+print("Tot re-ordering: " + str(np.round(np.mean(totOrderTime), 4)) + "s")
+print("First ordering: " + str(np.round(np.mean(firstOrd), 4)) + "s")
+print("Second ordering: " + str(np.round(np.mean(secondOrd), 4)) + "s")
+print("Noise condition: " + str(np.round(np.mean(timesNoise), 4)) + "s")
+print("Fraction condition: " + str(np.round(np.mean(timesFrac), 4)) + "s")
+print("DM limit condition: " + str(np.round(np.mean(timesDmlim), 4)) + "s")
+print("Burst duration condition: " + str(np.round(np.mean(timesBurst), 4)) + "s")
+print("Cluster preprocessing: " + str(np.round(np.mean(clusterPre), 4)) + "s")
+print("DM range condition: " + str(np.round(np.mean(timesRange), 4)) + "s")
+print("Shape calculation: " + str(np.round(np.mean(timesShape), 4)) + "s")
+print("Prob. Freq. calc.: " + str(np.round(np.mean(timesFreq), 4)) + "s")
+print("KS-test: " + str(np.round(np.mean(timesKS), 4)) + "s")
+print("Random Forest: " + str(np.round(np.mean(timesRF), 4)) + "s")
+print("Tot cluster time: " + str(np.round(np.mean(timesClusterTot), 4)) + "s")
+print("Cluster loop time: " + str(np.round(np.mean(clusLoop), 4)) + "s")
+print("Total per file: " + str(np.round(np.mean(timesTot), 4)) + "s")
+print("Time per MB: " + str(np.round(np.mean(timesPerMB), 4)) + "s")
+print("\n")
+print("Cordes y-vals: " + str(np.round(np.mean(cordesTimes), 4)) + "s")
+print("KS data generation: " + str(np.round(np.mean(ksDatProb), 4)) + "s")
+print("KS theo generation: " + str(np.round(np.mean(ksTheProb), 4)) + "s")
+print("KS stat calc.: " + str(np.round(np.mean(KSstat), 4)) + "s")
 
 
-# Creates dataframe table containing all feature values as well as the classification labels for each cluster
-dataframe = pd.DataFrame({'Shape Feature': shape_vals,
-                          'Skewness': skew_vals,
-                          'Kurtosis': kurt_vals,
-                          'KS-test stat': kstest_vals,
-                          'Label': class_vals})
-
-dataframe.to_csv("feature_table.csv")   # Writes dataframe to .csv file
-
+"""
+    least_acc = np.array(least_acc)
+    good = np.array(good)
+    excellent = np.array(excellent)
+    
+    total = []
+    if_var = 0
+    
+    # Adds a column to the numpy array with an integer corresponding to the cluster classification
+    # 3 = excellent, 2 = good, 1 = least acceptable
+    if (len(excellent) > 0):
+        excellent_c = np.full((len(excellent),7), 3, dtype = float)
+        excellent_c[:,:-1] = excellent
+        total.extend(excellent_c)
+        if_var += 1
+        CCount += 1
+    if (len(good) > 0):
+        good_c = np.full((len(good),7), 2, dtype = float)
+        good_c[:,:-1] = good
+        total.extend(good_c)
+        if_var += 1
+        CCount += 1
+    if (len(least_acc) > 0):
+        least_acc_c = np.full((len(least_acc),7), 1, dtype = float)
+        least_acc_c[:,:-1] = least_acc
+        total.extend(least_acc_c)
+        if_var += 1
+        CCount += 1
+        
+    total = np.array(total)         # Sets the total array containing feature values, class labels, and cluster numbers to Numpy array
+    
+    if len(total) > 0:              # If the 'total' array contains candidates then go in here
+        dataframe = pd.DataFrame({'DM': total[:,0],         # Creates a dataframe with feature values, class labels, and cluster numbers
+                                  'Time': total[:,1],
+                                  'S/N': total[:,2],
+                                  'Width': total[:,3],
+                                  'Class': total[:,6],
+                                  'Cluster Number': total[:,5]})
+        
+        new_name = source_paths[path_index].split("idir\\")[1].replace('.dat','_c.csv')               # Name of the class file to be created
+        dataframe.to_csv(os.getcwd() + '\\idir\\' + "\\candidates\\" + new_name, index = False) # Saves csv file of the above dataframe
+        new_path = os.getcwd() + '\\idir\\' + "\\candidates\\" + source_paths[path_index].split("idir\\")[1]  # Path to the created file
+        
+        if (os.path.isfile(new_path)) == False:     # Moves the .dat file to the 'candidates' directory only if there isn't already an
+            os.rename(file, new_path)               # identical .dat file there.
+            
+    else:                           # If there are no candidates then move the .dat file to the 'empty' directory
+        new_path = os.getcwd() + '\\idir\\' + "\\empty\\" + source_paths[path_index].split("idir\\")[1]
+        if (os.path.isfile(new_path)) == False:
+            os.rename(file, new_path)"""
 
          
-    
