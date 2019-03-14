@@ -22,7 +22,7 @@ for file in glob.glob(os.getcwd() + '\candidates2\\' + "*.csv"):
     
 #make directory for matrix files to go to
 try:
-    os.mkdir(os.getcwd()+"\matrix_files\\DM\\")
+    os.mkdir(os.getcwd()+"\matrix_files\\Final\\")
 except:
     pass
 
@@ -188,9 +188,14 @@ for x in range(len(source_paths)):
         #namine of matrix file
         c_id= str(int(k))
         new_name= source_paths[x].split("candidates2\\")[1].replace("_c.csv","_m_"+c_id+".csv")
+        #np.savetxt(os.getcwd()+"\matrix_files\\Final\\"+new_name, zero3)
         
-        np.savetxt(os.getcwd()+"\matrix_files\\DM\\"+new_name, zero3)
         
+        #temporary for playground
+        if int(k)==0:
+            np.save(os.getcwd()+"\matrix_files\\Playground\\Signal\\"+new_name, zero3)
+        else:
+            np.save(os.getcwd()+"\matrix_files\\Playground\\No_Signal\\"+new_name, zero3)
         
 print((n_s)) ###testing
 ###code from old method left incase of need
