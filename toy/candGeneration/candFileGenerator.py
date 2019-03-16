@@ -30,10 +30,10 @@ def progressBar(value, endvalue, bar_length=20):
 warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-intention = input("Simulate plots (s), or generate data to use (g)? ")
+intention = input("Simulate plots (s), generate candidate files (g), or generate training set (t)? ")
 
-while intention != "s" and intention != "g":
-    print("Invalid input, please indicated by entering either ""s"" or ""g"".")
+while intention != "s" and intention != "g" and intention != "t":
+    print("Invalid input, please indicated by entering either 's'," + "'g', " + "or 't'.")
     intention = input("Simulate plots (s), or generate data to use (g)? ")
 
 numBursts = input("Enter number of candidates to simulate: ")
@@ -46,7 +46,7 @@ while True:
         print("Invalid input, please indicate choice using an integer.")
         numBursts = input("Enter number of candidates to simulate: ")
 
-if intention == "g":
+if intention == "g" or intention == "t":
     folderName = input("Name of folder to be created: ")
     while folderName == "":
         print("Please enter a name of the folder to be created: ")
@@ -82,7 +82,7 @@ source_paths = []   # Array of file paths to be reviewed
 for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
     source_paths.append(file)
 
-
+print("\nGenerating candidates")
 while counter < numBursts:
     progressBar(counter, numBursts)
     path_index = int(round(np.random.uniform(0,len(source_paths) - 1)))
@@ -193,10 +193,25 @@ while counter < numBursts:
             fileName = file.split("idir\\")[1].replace('.dat',fileEnding)               # Name of the class file to be created
             
             finalArr.astype(np.float32).tofile(os.getcwd() + '\\odir\\' + folderName + "\\" + fileName)
-            
-            #dataframe.to_csv(os.getcwd() + '\\odir\\' + folderName + "\\" + fileName, index = False)
-            
+progressBar(numBursts,numBursts)         
         
+counter = 0
+print("\nGenerating non-candidates")
 
-
-
+while (counter < numBursts) and (intention == "t"):
+    progressBar(counter, numBursts)
+    counter += 1
+    path_index = int(round(np.random.uniform(0,len(source_paths) - 1)))
+    file = source_paths[path_index]      # Setting which file to open
+    data = np.array(DF(file))   # Creates dataframe from the .dat file
+    
+    lab = np.zeros((len(data[:,0]),1))
+    data = np.column_stack((data, lab))
+    
+    
+    data.reshape(-1)
+    fileEnding = "(" + str(counter + numBursts) + ").dat"
+    fileName = file.split("idir\\")[1].replace('.dat',fileEnding)               # Name of the class file to be created
+    
+    finalArr.astype(np.float32).tofile(os.getcwd() + '\\odir\\' + folderName + "\\" + fileName)
+progressBar(numBursts,numBursts) 
