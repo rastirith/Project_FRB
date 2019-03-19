@@ -9,9 +9,12 @@ import random
 import pandas as pd
 import sys
 from scipy import stats
+from timeit import default_timer as timer
 
 warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
+
+from featureDef import featureFile
 
 
 # Creates dataframe for file
@@ -41,17 +44,15 @@ def cordes(Wms,SNratio):
     x = np.linspace(-1000,1000,10000)   # Generates x-values for the cordes function
     zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*x       # Zeta function in the cordes function
     
-    first = 0       # Variable indicating whether bottom or top of DM range has been found
+    #first = 0       # Variable indicating whether bottom or top of DM range has been found
     bot_dm = 0      # Value of the lower end of the DM range
     top_dm = 0      # Value of the upper end of the DM range
     for i in range(len(x)): # Loops through the x-values and calculates the cordes value in each step
         y = (math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i])
-        if (y >= SNratio) and (first == 0): # First time the theoretical ratio goes above the actual ratio go in here
+        if (y >= SNratio): # First time the theoretical ratio goes above the actual ratio go in here
             bot_dm = x[i]                   # This x-value corresponds to the bottom DM value
-            first = 1                       # Changes variable value to not go into this statement again
-        if (y <= SNratio) and (first == 1): # First time the theoretical ratio goes below the actual ratio after bottom is found
-            top_dm = x[i]                   # This x-value corresponds to the top DM value
-            break                           # Values have been found, break out of loop
+            top_dm = x[10000 - i]
+            break
     dm_range = top_dm - bot_dm              # Theoretical allowed DM range for the current candidate
     return dm_range
     
@@ -76,24 +77,27 @@ def ks_cordes(dmArr,snArr,timeArr,peakDmMean):
     
     # Calculates the y-values of the theoretical function
     for i in range(len(x)):
-        cordes.append((math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i]))
-
-    altArr = []
+        temp_arr = []
+        y = (math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i])
+        frequency = int(y*100)
+        temp_arr = [x[i]] * frequency
+        cordesFreqArr.extend(temp_arr)
+        #cordes.append((math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i]))
 
     # Creates prob. freq. representation of the SN distribution
     for i in range(len(snRatios)):
         temp_arr = []
         frequency = int(snRatios[i]*100)      # Needs to be an integer, timed it by 1000 to reduce rounding errors, proportions still same
-        altArr.append(frequency)
         temp_arr = [dmScaled[i]] * frequency   # Creates the corresponding number of elements and adds it to the array
         snFreqArr.extend(temp_arr)
 
+    """
     # Creates prob. freq. representation of the cordes func.
     for i in range(len(cordes)):
         temp_arr = []
         frequency = int(cordes[i]*100)
         temp_arr = [x[i]] * frequency
-        cordesFreqArr.extend(temp_arr)
+        cordesFreqArr.extend(temp_arr)"""
         
     statistic = stats.ks_2samp(snFreqArr,cordesFreqArr) #2D KS-test
     return statistic[0]
@@ -114,7 +118,7 @@ while True:
         print("Invalid input, please indicate choice using an integer.")
         numBursts = input("Enter number of candidates to simulate: ")
 
-if intention == "g" or intention == "t":
+if intention == "c" or intention == "t":
     folderName = input("Name of folder to be created: ")
     while folderName == "":
         print("Please enter a name of the folder to be created: ")
@@ -127,7 +131,10 @@ if intention == "g" or intention == "t":
             print("A folder with this name already exists. Please enter a different name.")
             folderName = input("Name of folder to be created: ")
 
-
+if intention == "c":
+    os.mkdir(os.getcwd() + '\odir\\' + folderName + '\\bursts')
+    os.mkdir(os.getcwd() + '\odir\\' + folderName + '\\noise')
+    
 freq = 0.334                    # F0 of survey
 bandWidth = 64                  # Survey bandwidth
 
@@ -151,6 +158,8 @@ kurt_vals = []      # Array containing the kurtosis feature values of the candid
 kstest_vals = []    # Array containing the ks-test feature values of the candidates
 class_vals = []     # Array containing the classification labels of the candidates
 
+timer1 = []
+timer2 = []
 # Loops through all .dat files to store them in the 'source_paths' array
 for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
     source_paths.append(file)
@@ -163,6 +172,7 @@ else:
     typeVar = 0.5
 
 while counter < numBursts:
+    start1 = timer()
     progressBar(counter, numBursts)
     counter += 1
     
@@ -248,13 +258,22 @@ while counter < numBursts:
     totArr[:,3] = np.array(np.transpose(wArr))
     totArr[:,4] = np.array(np.transpose(labArr))
     
-    bursts.append(totArr)
+    if intention == "c":
+        totArr.reshape(-1)
+        fileName = "burst_cand_" + str(counter) + ".dat"     # Name of the class file to be created
+        totArr.astype(np.float32).tofile(os.getcwd() + '\\odir\\' + folderName + "\\bursts\\" + fileName)
+    else:
+        bursts.append(totArr) 
+        
+    end1 = timer()
+    timer1.append(end1 - start1)
 
 progressBar(numBursts,numBursts)               
 counter = 0
 print("\nGenerating non-candidates")
 
-while (counter < numBursts) and (intention == "t"):
+while (counter < numBursts) and ((intention == "t") or (intention == "c")):
+    start2 = timer()
     progressBar(counter, numBursts)
     counter += 1
     counterFactor = 1
@@ -394,117 +413,36 @@ while (counter < numBursts) and (intention == "t"):
     totArr[:,3] = np.array(np.transpose(wArr))
     totArr[:,4] = np.array(np.transpose(labArr))
     
-    bursts.append(totArr)    
+    if intention == "c":
+        totArr.reshape(-1)
+        fileName = "noise_cand_" + str(counter) + ".dat"     # Name of the class file to be created
+        totArr.astype(np.float32).tofile(os.getcwd() + '\\odir\\' + folderName + "\\noise\\" + fileName)
+        
+    else:
+        bursts.append(totArr)    
+        
+    end2 = timer()
+    timer2.append(end2 - start2)
 
 bursts = np.array(bursts)
 progressBar(numBursts,numBursts)              
 counter = 0
-print("\nCalculating features")
+print("Cand generation: " + str(np.round(np.mean(timer1), 4)) + "s")
+print("Noise generation: " + str(np.round(np.mean(timer2), 4)) + "s")
 
-for q in range(len(bursts)):
-    progressBar(q,len(bursts))
-    
-    signalToDm = list(zip(bursts[q][:,0], bursts[q][:,2]))
-    signalToDm = np.array(signalToDm)
-    
-    shifted = list(zip(bursts[q][:,0], bursts[q][:,2]))
-    shifted = np.array(shifted)
-    min_val = min(shifted[:,1])
-    
-    """
-    # Sets y = 0 for visualisation
-    for i in range(len(signalToDm[:,1])):
-        signalToDm[:,1][i] = signalToDm[:,1][i] - min_val"""
+if intention == "t":
+    print("\nCalculating features")
+    shape_vals, skew_vals, kurt_vals, kstest_vals, class_vals = featureFile(bursts)
 
-    # Splitting into chunks of equal number of events in each
-    split_param = 7 # Number of chunks to be split into
-    dummy = np.array_split(shifted,split_param)
+    # Creates dataframe table containing all feature values as well as the classification labels for each cluster
+    dataframe = pd.DataFrame({'Shape Feature': shape_vals,
+                              'Skewness': skew_vals,
+                              'Kurtosis': kurt_vals,
+                              'KS-test stat': kstest_vals,
+                              'Label': class_vals})
     
-    meanSN = []     # Contains mean SN value of each chunk 
-    meanDM = []     # Contains mean DM value of each chunk
-    
-    # Loops through the chunks, calculates the relevant mean values and puts them into the appropriate arrays
-    for i in range(len(dummy)):
-        tempSN = np.mean(dummy[i][:,1])
-        tempDM = np.mean(dummy[i][:,0])
-        meanSN.append(tempSN)
-        meanDM.append(tempDM)
-        
-    max_ind = np.argmax(meanSN)     # Finds the index for the highest SN bin value
-    
-    freq_arr = []       # Probability frequency distribution representation of the DM - SN data
-    
-    weight_1 = 0.3      # Score weight if ratio is less than 1 but more than 1 - check_1
-    weight_2 = -0.3     # Score weight if ratio is less than 1 - check_1, but more than 1 - check_2
-    weight_3 = 1        # Score weight if ratio is less than 1 - check_2
-    weight_4 = -1       # Score weight if ratio is more than 1
-    check_1 = 0.075
-    check_2 = 0.15
-    score = [0,1.3,2.5,2.5]                         # Scoring system where one index step corresponds to one step from peak bin
-    max_score = 2*(score[0] + score[1] + score[2])  # Maximum possible score
-    rating = 0  # Rating score after weight and scores have been applied
-    
-    if (max_ind > 4) or (max_ind < 2):
-        rating = 0
-    else:
-        for i in range(max_ind - 1, -1, -1):                # Loops through all bins from the peak bin moving to the left
-            ratio=meanSN[i]/meanSN[i+1]                     # Ratio of the next bin to the previous bin
-        
-            if ((ratio>=(1-check_1)) and (ratio<=1)):
-                rating += weight_1*score[max_ind-(i+1)]
-            elif ((ratio>=(1-check_2)) and (ratio<=1)):
-                rating += weight_2*score[max_ind-(i+1)]
-            elif (ratio<=1):
-                rating += weight_3*score[max_ind-(i+1)]
-            else:
-                rating += weight_4*score[max_ind-(i+1)]
-                        
-        for i in range((max_ind+1),split_param):            # Loops through all bins from the peak bin moving to the right
-            ratio=meanSN[i]/meanSN[i-1]
-    
-            if ((ratio>=(1-check_1)) and (ratio<=1)):
-                rating += weight_1*score[i-max_ind-1]
-            elif ((ratio>=(1-check_2)) and (ratio<=1)):
-                rating += weight_2*score[i-max_ind-1]
-            elif ratio <=1:
-                rating += weight_3*score[i-max_ind-1]
-            else:
-                rating += weight_4*score[i-max_ind-1]
-    xwidth=(min(signalToDm[:,0]) - max(signalToDm[:,0]))/12        
+    dataframe.to_csv(os.getcwd() + '\\odir\\' + folderName + "\\" + "feature_table.csv", index = False)   # Writes dataframe to .csv file
+    progressBar(numBursts,numBursts)
 
-    # Exception case where rating is less than 0, sets rating to 0 if this happens
-    if rating < 0:
-        rating = 0
-
-    # Converts the S/N-DM plot into a probability frequency plot
-    # Instead of each point in DM space having a corresponding S/N y-value
-    # there will be an array containing a number of DM elements proportional to its S/N value
-    normal_snRatios = (signalToDm[:,1])/(max(signalToDm[:,1]))
-    for i in range(len(signalToDm)):
-        temp_arr = []
-        frequency = int((normal_snRatios[i])*1000)      # Needs to be an integer, timed it by 1000 to reduce rounding errors, proportions still same
-        temp_arr = [signalToDm[i][0]] * frequency   # Creates the corresponding number of elements and adds it to the array
-        freq_arr.extend(temp_arr)
-
-    # FEATURES
-    shape_conf = rating/max_score                       # Shape conf feature
-    skewness = skew(freq_arr, axis = 0)                 # Skewness feature
-    kurt = kurtosis(freq_arr, axis = 0, fisher = True)  # Kurtosis feature
-    ks_stat = ks_cordes(signalToDm[:,0],signalToDm[:,1],bursts[q][:,1],meanDM[max_ind])     # KS feature
     
-    # Adds the feature values to the corresponding arrays
-    shape_vals.append(shape_conf)
-    skew_vals.append(skewness)
-    kurt_vals.append(kurt)
-    kstest_vals.append(ks_stat)
-    class_vals.append(bursts[q][0][4])
-    
-# Creates dataframe table containing all feature values as well as the classification labels for each cluster
-dataframe = pd.DataFrame({'Shape Feature': shape_vals,
-                          'Skewness': skew_vals,
-                          'Kurtosis': kurt_vals,
-                          'KS-test stat': kstest_vals,
-                          'Label': class_vals})
 
-dataframe.to_csv(os.getcwd() + '\\odir\\' + folderName + "\\" + "feature_table.csv", index = False)   # Writes dataframe to .csv file
-progressBar(numBursts,numBursts) 
