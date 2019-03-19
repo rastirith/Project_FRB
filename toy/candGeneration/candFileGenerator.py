@@ -192,8 +192,10 @@ while counter < numBursts:
             ax.set_ylabel("DM")
             ax.set_title("Cordes function")
             plt.show()
-        elif intention == "g" and fileOrBurst == "i":
+        elif intention == "g" and fileOrBurst == "i":'
+        
             
+                
             finalArr.reshape(-1)
             fileEnding = "(" + str(counter) + ").dat"
             fileName = file.split("idir\\")[1].replace('.dat',fileEnding)               # Name of the class file to be created
@@ -209,8 +211,8 @@ while (counter < numBursts) and (intention == "t"):
     progressBar(counter, numBursts)
     counter += 1
     path_index = int(round(np.random.uniform(0,len(source_paths) - 1)))
-    file = source_paths[path_index]      # Setting which file to open
-    data = np.array(DF(file))   # Creates dataframe from the .dat file
+    file = source_paths[path_index]         # Setting which file to open
+    data = np.array(DF(file))               # Creates dataframe from the .dat file
     
     lab = np.zeros((len(data[:,0]),1))
     data = np.column_stack((data, lab))
