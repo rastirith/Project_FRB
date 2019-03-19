@@ -45,7 +45,7 @@ upperTime = 50                  # Upper possible time of detection for burst in 
 upperDur = 50                   # Upper possible duration of burst in milliseconds
 quantFrac = 0.8                 # Fraction over which the quantile method to calculate duration is used
 fraction = 0.75                 # Probability of there being a point in a single DM step
-noiseFraction = 0.5    # Fraction of noise events in a candidate
+noiseFraction = 0.5             # Fraction of noise events in a candidate
 
 numBursts = 10                 # Number of bursts to simulate
 bursts = []                     # All bursts are stored here, array of arrays
@@ -81,8 +81,7 @@ for k in range(numBursts):
     while numPoints < 20:
         numPoints = int(np.random.gumbel(0.015, 0.06)*2000) # Draws the number of points from this distribution
     
-    
-    stDevSN = 2             # Standard deviation of the SN of the burst events
+    stDevSN = 4             # Standard deviation of the SN of the burst events
     stDevDM = dmWidth*0.1   # Standard deviation of the DM of the burst events
     start = -dmWidth/2          # Lower end of the DM range of the burst, currently centered around 0
     step = dmWidth/numPoints    # Size of each DM step when looping through the DM range
