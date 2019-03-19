@@ -30,7 +30,7 @@ def progressBar(value, endvalue, bar_length=20):
 warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-intention = input("Simulate plots (s), generate candidate files (g), or generate training set (t)? ")
+intention = input("Plot bursts (s), generate candidate bursts (g), or generate training set (t)? ")
 
 while intention != "s" and intention != "g" and intention != "t":
     print("Invalid input, please indicated by entering either 's'," + "'g', " + "or 't'.")
@@ -58,6 +58,12 @@ if intention == "g" or intention == "t":
         except:
             print("A folder with this name already exists. Please enter a different name.")
             folderName = input("Name of folder to be created: ")
+            
+if intention == "g":
+    fileOrBurst = input("Generate files with inserted burst (i), burst only (b), or features file of bursts (f)? " )
+    while fileOrBurst != "i" and intention != "b" and intention != "f":
+        print("Invalid input, please indicated by entering either 'i'," + "'b', " + "or 'f'.")
+        fileOrBurst = input("Generate files with inserted burst (i), burst only (b), or features file of bursts (f)? " )
         
 freq = 0.334                    # F0 of survey
 bandWidth = 64                  # Survey bandwidth
@@ -186,13 +192,14 @@ while counter < numBursts:
             ax.set_ylabel("DM")
             ax.set_title("Cordes function")
             plt.show()
-        else:
+        elif intention == "g" and fileOrBurst == "i":
             
             finalArr.reshape(-1)
             fileEnding = "(" + str(counter) + ").dat"
             fileName = file.split("idir\\")[1].replace('.dat',fileEnding)               # Name of the class file to be created
             
             finalArr.astype(np.float32).tofile(os.getcwd() + '\\odir\\' + folderName + "\\" + fileName)
+
 progressBar(numBursts,numBursts)         
         
 counter = 0

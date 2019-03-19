@@ -4,7 +4,6 @@ import matplotlib as mpl
 import glob, os
 import warnings
 import math
-import pickle
 from scipy import stats
 from sklearn.cluster import DBSCAN
 from sklearn import preprocessing
@@ -67,6 +66,7 @@ def ks_cordes(dmArr,snArr,timeArr,peakDmMean):
     
     x = np.linspace(min(dmScaled),max(dmScaled),2000)           # X-values for cordes function
     zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*x       # Zeta function, see Cordes & M
+    zeta[zeta == 0] = 0.000001
     
     # Calculates the y-values of the theoretical function
     for i in range(len(x)):
@@ -260,8 +260,6 @@ for i in range(2000,20000):
         signalToDm = list(zip(dmData, snData))  # Array containing DM - SN data
         signalToDm = np.array(signalToDm)
         min_val = min(signalToDm[:,1])                                  # Finds the lowest SN-value in the candidate array
-
-        scaled_signal = preprocessing.MinMaxScaler().fit_transform(signalToDm)  # Preprocesses signalToDM to used for sharpness condition
 
         # Sets y = 0 for visualisation
         for i in range(len(signalToDm[:,1])):
