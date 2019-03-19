@@ -10,9 +10,9 @@ from sklearn.cluster import DBSCAN
 from sklearn import preprocessing
 from scipy.stats import skew, kurtosis
 
-
 warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
+np.set_printoptions(suppress=True)
 
 # Returns 'num' lowest elements of array 'arr' in a new array
 def sort(arr, num):
@@ -32,10 +32,10 @@ def clusterOrder(clusterArr):
 
 # Creates dataframe for file
 def DF(path):
-    axislabels = ["DM", "Time", "S/N", "Width"]
+    axislabels = ["DM", "Time", "S/N", "Width", "Label"]
     Tfile = open(path,'r')
     data = np.fromfile(Tfile,np.float32,-1) 
-    c = data.reshape((-1,4))
+    c = data.reshape((-1,5))
     df = pd.DataFrame(c,columns=axislabels)
     Tfile.close()
     return df
@@ -131,7 +131,7 @@ pos_array = pos_array_mp3
 source_paths = []   # Array of file paths to be reviewed
 
 # Loops through all .dat files to store them in the 'source_paths' array
-for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
+for file in glob.glob(os.getcwd() + '\idir\\input\\' + "*.dat"):
     source_paths.append(file)
 
 try:    # Only creates folders if they don't already exist
@@ -148,7 +148,7 @@ kstest_vals = []    # Array containing the ks-test feature values of the candida
 class_vals = []     # Array containing the classification labels of the candidates
 
 # Loops through the whole file space defined by 'source_paths'
-for i in range(0,72): 
+for i in range(1,2): 
     print(i)
     
     fileSize = os.path.getsize(source_paths[i])/1024000
@@ -164,7 +164,8 @@ for i in range(0,72):
     # Sorts the data points by DM
     points_db = X_db[X_db[:,0].argsort()]
     points = X[X[:,0].argsort()]
-    
+    print(X)
+    break
     # Lower DM limit below which the DBScan is now run as it is most likely not extragalactic
     # Speeds up the DBScan runtime
     dm_lim = 0.03*max(points_db[:,0])

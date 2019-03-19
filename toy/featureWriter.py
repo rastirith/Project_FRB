@@ -4,15 +4,25 @@ import matplotlib as mpl
 import glob, os
 import warnings
 import math
-import pickle
 from scipy import stats
 from sklearn.cluster import DBSCAN
 from sklearn import preprocessing
 from scipy.stats import skew, kurtosis
+import sys
+from timeit import default_timer as timer
 
 
 warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
+np.set_printoptions(suppress=True)
+
+def progressBar(value, endvalue, bar_length=20):
+    
+    percent = float(value) / endvalue
+    arrow = '-' * int(round(percent * bar_length) - 1) + '>'
+    spaces = ' ' * (bar_length - len(arrow))
+    
+    sys.stdout.write("\rPercent: [{0}] {1}%".format(arrow + spaces, int(round(percent * 100))))
 
 # Returns 'num' lowest elements of array 'arr' in a new array
 def sort(arr, num):
@@ -32,10 +42,10 @@ def clusterOrder(clusterArr):
 
 # Creates dataframe for file
 def DF(path):
-    axislabels = ["DM", "Time", "S/N", "Width"]
+    axislabels = ["DM", "Time", "S/N", "Width", "Label"]
     Tfile = open(path,'r')
     data = np.fromfile(Tfile,np.float32,-1) 
-    c = data.reshape((-1,4))
+    c = data.reshape((-1,5))
     df = pd.DataFrame(c,columns=axislabels)
     Tfile.close()
     return df
@@ -56,6 +66,7 @@ def ks_cordes(dmArr,snArr,timeArr,peakDmMean):
     
     x = np.linspace(min(dmScaled),max(dmScaled),2000)           # X-values for cordes function
     zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*x       # Zeta function, see Cordes & M
+    zeta[zeta == 0] = 0.000001
     
     # Calculates the y-values of the theoretical function
     for i in range(len(x)):
@@ -129,7 +140,7 @@ pos_array = pos_array_mp3
 source_paths = []   # Array of file paths to be reviewed
 
 # Loops through all .dat files to store them in the 'source_paths' array
-for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
+for file in glob.glob(os.getcwd() + '\idir\\input\\' + "*.dat"):
     source_paths.append(file)
 
 try:    # Only creates folders if they don't already exist
@@ -147,23 +158,25 @@ class_vals = []     # Array containing the classification labels of the candidat
 
 
 # Loops through the whole file space defined by 'source_paths'
-for i in range(0,72): 
-    print(i)
-    
+for i in range(2000,20000): 
+    start = timer()
+    progressBar(i, len(source_paths))
+    end = timer()
+    print(end-start)
     fileSize = os.path.getsize(source_paths[i])/1024000
     path_index = i      # Current path index in the source_paths array
-    
+    break
     file = source_paths[path_index]     # Setting which file to open
-    df = DF(file) # Creates dataframe from the .dat file
-    orig_X = np.array(df)   # Sets dataframe as a Numpy array
     
-    X_db = np.array(df.drop(columns=['Width', 'S/N']))  # Drops width and S/N data for DBScan to run on the DM - Time space
+    df = DF(file)                       # Creates dataframe from the .dat file
+    #print(source_paths)
+    X_db = np.array(df.drop(columns=['Width', 'S/N', 'Label']))  # Drops width and S/N data for DBScan to run on the DM - Time space
     X = np.array(df)
     
     # Sorts the data points by DM
     points_db = X_db[X_db[:,0].argsort()]
     points = X[X[:,0].argsort()]
-    
+
     # Lower DM limit below which the DBScan is now run as it is most likely not extragalactic
     # Speeds up the DBScan runtime
     dm_lim = 0.03*max(points_db[:,0])
@@ -247,8 +260,6 @@ for i in range(0,72):
         signalToDm = list(zip(dmData, snData))  # Array containing DM - SN data
         signalToDm = np.array(signalToDm)
         min_val = min(signalToDm[:,1])                                  # Finds the lowest SN-value in the candidate array
-
-        scaled_signal = preprocessing.MinMaxScaler().fit_transform(signalToDm)  # Preprocesses signalToDM to used for sharpness condition
 
         # Sets y = 0 for visualisation
         for i in range(len(signalToDm[:,1])):
