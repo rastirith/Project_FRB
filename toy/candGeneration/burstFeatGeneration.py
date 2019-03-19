@@ -9,6 +9,7 @@ import random
 import pandas as pd
 import sys
 from scipy import stats
+from bisect import bisect_left
 
 warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -98,6 +99,31 @@ def ks_cordes(dmArr,snArr,timeArr,peakDmMean):
     statistic = stats.ks_2samp(snFreqArr,cordesFreqArr) #2D KS-test
     return statistic[0]
 
+# Finds the closest value to a myNumber in sorted myList 
+def takeClosest(myList, myNumber):
+    pos = bisect_left(myList, myNumber) #bisection search to return and index
+    if pos == 0:
+        return myList[0]    #before range of list return first value
+    if pos == len(myList):
+        return myList[-1]   #outside range return last value
+    before = myList[pos - 1]    #valude 1 index prior
+    after = myList[pos]     #value 1 index later
+    if after - myNumber < myNumber - before:
+       return after
+    else:
+       return before
+
+#make directory for files to be outputted an inputted if they don't exist
+try:
+    os.mkdir(os.getcwd()+"\odir\\") #output folder
+except:
+    pass
+try: ####If changed to inject into a file will need error hadnling for an empty idirt
+    
+    os.mkdir(os.getcwd()+"\idir\\") #input folder 
+except:
+    pass
+
 intention = input("Generate candidate bursts only (c), or generate training set (t)? ")
 
 while intention != "c" and intention != "t":
@@ -154,6 +180,25 @@ class_vals = []     # Array containing the classification labels of the candidat
 # Loops through all .dat files to store them in the 'source_paths' array
 for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
     source_paths.append(file)
+
+# Import dedispersion plan
+df_ddp = pd.read_csv("dd_plan.txt")
+
+# Setup array for step limits
+dd_DM = np.array(df_ddp["DM_stop"])
+dd_step = np.array(df_ddp["DM_step"])
+
+# Constructing DM_poss array of possible DM values from ddp
+DM_start = df_ddp["DM_start"]
+DM_stop = df_ddp["DM_stop"]
+DM_step = df_ddp["DM_step"]
+DM_poss = [0.0] 
+
+for i in range(len(DM_stop)):
+    DM_range=DM_stop[i]-DM_start[i]
+    num=round(DM_range/DM_step[i])
+    for j in range(int(num)):
+        DM_poss.append(round(DM_poss[-1]+DM_step[i],3))
 
 print("\nGenerating candidates")
 
@@ -217,13 +262,13 @@ while counter < numBursts:
         
             devSN = np.random.normal(0,stDevSN)   # Deviation from the theoretical SN value for the current point
             devDM = np.random.normal(0,stDevDM)   # Deviation from the DM value for the current point
-            dmArr.append(dmMid + dmTemp + devDM)    # Adds the actual DM value of the point to an array
+            dmArr.append(takeClosest(DM_poss, dmMid + dmTemp + devDM))   # Adds the actual DM value of the point to an array that has been "pixelated" to match the p-band data
 
             zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*(dmTemp + devDM)        # Zeta-function
             snArr.append(math.pi**(1/2)*0.5*(zeta**-1)*math.erf(zeta)*(peakSN + devSN)) # SN value of the point, including deviation
             
-            timeVar = timeMid + np.random.uniform(-timeRange,timeRange)/1000    # Time of detection of the points
-            tArr.append(timeVar)    # Adds the time to the time array
+            timeVar = 0.000256*round((timeMid + np.random.uniform(-timeRange,timeRange)/1000)/0.000256)     # Time of detection of the points
+            tArr.append(round(timeVar,6))    # Adds the time to the time array that has been "pixelated" to match the p-band data
             wArr.append(32)
             labArr.append(1)
         
@@ -233,7 +278,7 @@ while counter < numBursts:
                 noiseSN = np.random.uniform(0, peakSN*1.1)
                 noiseTime = timeMid + np.random.uniform(-timeRange,timeRange)/1000
                 
-                dmArr.append(noiseDM)
+                dmArr.append(takeClosest(DM_poss, noiseDM))
                 snArr.append(noiseSN)
                 tArr.append(noiseTime)
                 wArr.append(32)
@@ -330,7 +375,7 @@ while (counter < numBursts) and (intention == "t"):
                     k = (botSN - peakSN)/(dmWidth)
                     y = (dmMid + dmTemp)*k + c
                     snArr.append(y) # SN value of the point, including deviation
-                dmArr.append(dmMid + dmTemp + devDM)
+                dmArr.append(takeClosest(DM_poss, dmMid + dmTemp + devDM))
                     
             elif typeVar >= 0.5:    # Horizontal SN shape
                 devSN = np.random.normal(0,horStDevSN)  # Using own StDev since these tend to be narrower than normal signals
@@ -379,10 +424,10 @@ while (counter < numBursts) and (intention == "t"):
                         devSN2 = np.random.normal(0,horStDevSN)  # Using own StDev since these tend to be narrower than normal signals
                         y2 = horSN + devSN2
                         snArr.append(y2)
-                dmArr.append(dmMid + dmTemp + devDM)
+                dmArr.append(takeClosest(DM_poss, dmMid + dmTemp + devDM))
                     
-            timeVar = timeMid + np.random.uniform(-timeRange,timeRange)/1000    # Time of detection of the points
-            tArr.append(timeVar)    # Adds the time to the time array
+            timeVar = 0.000256*round((timeMid + np.random.uniform(-timeRange,timeRange)/1000)/0.000256)     # Time of detection of the points
+            tArr.append(round(timeVar,6))    # Adds the time to the time array that has been "pixelated" to match the p-band data
             wArr.append(32)
             labArr.append(0)
 
