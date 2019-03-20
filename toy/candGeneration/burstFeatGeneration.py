@@ -2,15 +2,12 @@ import numpy as np
 import matplotlib as mpl
 import glob, os
 import warnings
-from matplotlib import pyplot as plt
-from scipy.stats import skew, kurtosis
 import math
 import random
 import pandas as pd
 import sys
 from scipy import stats
 from bisect import bisect_left
-from timeit import default_timer as timer
 
 
 warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
@@ -61,13 +58,12 @@ def cordes(Wms,SNratio):
 # Conducts the 2d KS-test on the SN-DM distribution and the theoretical cordes equation
 def ks_cordes(dmArr,snArr,timeArr,peakDmMean):
     freq = 0.334
-    bandWidth = 64
-    cordes = []             # y-values of the theoretical cordes function
+    bandWidth = 64          # y-values of the theoretical cordes function
     peakSN = max(snArr)     # Value of the higher SN-bin of the data
     snFreqArr = []          # Probability frequency distribution for the data
     cordesFreqArr = []      # Probability frequency distribution for the theoretical function
     
-    Wms = np.percentile(timeArr,75)-np.percentile(timeArr,25)   # Time width using the quantile method
+    Wms = np.percentile(timeArr,8)-np.percentile(timeArr,2)   # Time width using the quantile method
     Wms = Wms*1000                                              # Must be in milliseconds
     dmScaled = dmArr - peakDmMean                               # Centers the data around DM = 0
     snRatios = (snArr + 9)/(peakSN + 9)                         # Ratios of the SN-values in relation to the peak
@@ -76,7 +72,6 @@ def ks_cordes(dmArr,snArr,timeArr,peakDmMean):
     zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*x       # Zeta function, see Cordes & M
     zeta[zeta == 0] = 0.000001
     
-    
     # Calculates the y-values of the theoretical function
     for i in range(len(x)):
         temp_arr = []
@@ -84,7 +79,6 @@ def ks_cordes(dmArr,snArr,timeArr,peakDmMean):
         frequency = int(y*100)
         temp_arr = [x[i]] * frequency
         cordesFreqArr.extend(temp_arr)
-        #cordes.append((math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i]))
 
     # Creates prob. freq. representation of the SN distribution
     for i in range(len(snRatios)):
@@ -92,14 +86,6 @@ def ks_cordes(dmArr,snArr,timeArr,peakDmMean):
         frequency = int(snRatios[i]*100)      # Needs to be an integer, timed it by 1000 to reduce rounding errors, proportions still same
         temp_arr = [dmScaled[i]] * frequency   # Creates the corresponding number of elements and adds it to the array
         snFreqArr.extend(temp_arr)
-
-    """
-    # Creates prob. freq. representation of the cordes func.
-    for i in range(len(cordes)):
-        temp_arr = []
-        frequency = int(cordes[i]*100)
-        temp_arr = [x[i]] * frequency
-        cordesFreqArr.extend(temp_arr)"""
         
     statistic = stats.ks_2samp(snFreqArr,cordesFreqArr) #2D KS-test
     return statistic[0]
@@ -172,7 +158,7 @@ snRangeBot = 10                 # Lower possible peak SN for burst
 snRangeTop = 40                 # Upper possible peak SN for burst
 quantFrac = 0.8                 # Fraction over which the quantile method to calculate duration is used
 fraction = 0.75                 # Probability of there being a point in a single DM step
-noiseFraction = 0.1             # Fraction of noise events in a candidate
+noiseFraction = 0.15             # Fraction of noise events in a candidate
 
 bursts = []                     # All bursts are stored here, array of arrays
 counter = 0
@@ -218,8 +204,7 @@ else:
     typeVar = 0.5
 
 while counter < numBursts:
-    start1 = timer()
-    progressBar(counter, numBursts)
+    #progressBar(counter, numBursts)
     counter += 1
     
     upperTime = 50
@@ -253,7 +238,6 @@ while counter < numBursts:
     while numPoints < 20:
         numPoints = int(np.random.gumbel(0.015, 0.06)*2000) # Draws the number of points from this distribution
     
-    
     stDevSN = 2             # Standard deviation of the SN of the burst events
     stDevDM = dmWidth*0.1   # Standard deviation of the DM of the burst events
     start = -dmWidth/2          # Lower end of the DM range of the burst, currently centered around 0
@@ -278,15 +262,16 @@ while counter < numBursts:
             zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*(dmTemp + devDM)        # Zeta-function
             snArr.append(math.pi**(1/2)*0.5*(zeta**-1)*math.erf(zeta)*(peakSN + devSN)) # SN value of the point, including deviation
             
-            timeVar = 0.000256*round((timeMid + np.random.uniform(-timeRange,timeRange)/1000)/0.000256)     # Time of detection of the points
-            tArr.append(round(timeVar,6))    # Adds the time to the time array that has been "pixelated" to match the p-band data
+            timeVar = (timeMid + np.random.uniform(-timeRange,timeRange)/1000)     # Time of detection of the points
+            #print(timeVar)
+            tArr.append(timeVar)    # Adds the time to the time array that has been "pixelated" to match the p-band data
             wArr.append(32)
             labArr.append(1)
         
             if tempVar1 <= noiseFraction*fraction:  # Generates the the noise points
                 count += 1
                 noiseDM = np.random.uniform((dmMid + start*1.1 - stDevDM*3), (dmMid + stDevDM*3 - start*1.1))
-                noiseSN = np.random.uniform(0, peakSN*1.1)
+                noiseSN = np.random.uniform(0, peakSN*0.8)
                 noiseTime = timeMid + np.random.uniform(-timeRange,timeRange)/1000
                 
                 dmArr.append(takeClosest(DM_poss, noiseDM))
@@ -302,24 +287,21 @@ while counter < numBursts:
     totArr[:,1] = np.array(np.transpose(tArr))
     totArr[:,2] = np.array(np.transpose(snArr))
     totArr[:,3] = np.array(np.transpose(wArr))
-    totArr[:,4] = np.array(np.transpose(labArr))
     
     if intention == "c":
         totArr.reshape(-1)
         fileName = "burst_cand_" + str(counter) + ".dat"     # Name of the class file to be created
         totArr.astype(np.float32).tofile(os.getcwd() + '\\odir\\' + folderName + "\\bursts\\" + fileName)
     else:
+        totArr[:,4] = np.array(np.transpose(labArr))
         bursts.append(totArr) 
-        
-    end1 = timer()
-    timer1.append(end1 - start1)
 
 progressBar(numBursts,numBursts)               
 counter = 0
 print("\nGenerating non-candidates")
 
+
 while (counter < numBursts) and ((intention == "t") or (intention == "c")):
-    start2 = timer()
     progressBar(counter, numBursts)
     counter += 1
     counterFactor = 1
@@ -457,24 +439,18 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
     totArr[:,1] = np.array(np.transpose(tArr))
     totArr[:,2] = np.array(np.transpose(snArr))
     totArr[:,3] = np.array(np.transpose(wArr))
-    totArr[:,4] = np.array(np.transpose(labArr))
     
     if intention == "c":
         totArr.reshape(-1)
         fileName = "noise_cand_" + str(counter) + ".dat"     # Name of the class file to be created
         totArr.astype(np.float32).tofile(os.getcwd() + '\\odir\\' + folderName + "\\noise\\" + fileName)
-        
     else:
+        totArr[:,4] = np.array(np.transpose(labArr))
         bursts.append(totArr)    
-        
-    end2 = timer()
-    timer2.append(end2 - start2)
 
 bursts = np.array(bursts)
 progressBar(numBursts,numBursts)              
 counter = 0
-print("Cand generation: " + str(np.round(np.mean(timer1), 4)) + "s")
-print("Noise generation: " + str(np.round(np.mean(timer2), 4)) + "s")
 
 if intention == "t":
     print("\nCalculating features")

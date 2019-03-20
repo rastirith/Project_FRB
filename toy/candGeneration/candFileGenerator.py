@@ -192,7 +192,7 @@ while counter < numBursts:
             ax.set_ylabel("DM")
             ax.set_title("Cordes function")
             plt.show()
-        elif intention == "g" and fileOrBurst == "i":'
+        elif intention == "g" and fileOrBurst == "i":
         
             
                 
