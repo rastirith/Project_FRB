@@ -54,41 +54,6 @@ def cordes(Wms,SNratio):
             break
     dm_range = top_dm - bot_dm              # Theoretical allowed DM range for the current candidate
     return dm_range
-    
-# Conducts the 2d KS-test on the SN-DM distribution and the theoretical cordes equation
-def ks_cordes(dmArr,snArr,timeArr,peakDmMean):
-    freq = 0.334
-    bandWidth = 64          # y-values of the theoretical cordes function
-    peakSN = max(snArr)     # Value of the higher SN-bin of the data
-    snFreqArr = []          # Probability frequency distribution for the data
-    cordesFreqArr = []      # Probability frequency distribution for the theoretical function
-    
-    Wms = np.percentile(timeArr,8)-np.percentile(timeArr,2)   # Time width using the quantile method
-    Wms = Wms*1000                                              # Must be in milliseconds
-    dmScaled = dmArr - peakDmMean                               # Centers the data around DM = 0
-    snRatios = (snArr + 9)/(peakSN + 9)                         # Ratios of the SN-values in relation to the peak
-    
-    x = np.linspace(min(dmScaled),max(dmScaled),2000)           # X-values for cordes function
-    zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*x       # Zeta function, see Cordes & M
-    zeta[zeta == 0] = 0.000001
-    
-    # Calculates the y-values of the theoretical function
-    for i in range(len(x)):
-        temp_arr = []
-        y = (math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i])
-        frequency = int(y*100)
-        temp_arr = [x[i]] * frequency
-        cordesFreqArr.extend(temp_arr)
-
-    # Creates prob. freq. representation of the SN distribution
-    for i in range(len(snRatios)):
-        temp_arr = []
-        frequency = int(snRatios[i]*100)      # Needs to be an integer, timed it by 1000 to reduce rounding errors, proportions still same
-        temp_arr = [dmScaled[i]] * frequency   # Creates the corresponding number of elements and adds it to the array
-        snFreqArr.extend(temp_arr)
-        
-    statistic = stats.ks_2samp(snFreqArr,cordesFreqArr) #2D KS-test
-    return statistic[0]
 
 # Finds the closest value to a myNumber in sorted myList 
 def takeClosest(myList, myNumber):
@@ -204,7 +169,7 @@ else:
     typeVar = 0.5
 
 while counter < numBursts:
-    #progressBar(counter, numBursts)
+    progressBar(counter, numBursts)
     counter += 1
     
     upperTime = 50
@@ -262,7 +227,7 @@ while counter < numBursts:
             zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*(dmTemp + devDM)        # Zeta-function
             snArr.append(math.pi**(1/2)*0.5*(zeta**-1)*math.erf(zeta)*(peakSN + devSN)) # SN value of the point, including deviation
             
-            timeVar = (timeMid + np.random.uniform(-timeRange,timeRange)/1000)     # Time of detection of the points
+            timeVar = 0.000256*(round((timeMid + np.random.uniform(-timeRange,timeRange)/1000)/0.000256))    # Time of detection of the points
             #print(timeVar)
             tArr.append(timeVar)    # Adds the time to the time array that has been "pixelated" to match the p-band data
             wArr.append(32)
@@ -272,7 +237,7 @@ while counter < numBursts:
                 count += 1
                 noiseDM = np.random.uniform((dmMid + start*1.1 - stDevDM*3), (dmMid + stDevDM*3 - start*1.1))
                 noiseSN = np.random.uniform(0, peakSN*0.8)
-                noiseTime = timeMid + np.random.uniform(-timeRange,timeRange)/1000
+                noiseTime = 0.000256*(round((timeMid + np.random.uniform(-timeRange,timeRange)/1000)/0.000256))
                 
                 dmArr.append(takeClosest(DM_poss, noiseDM))
                 snArr.append(noiseSN)
@@ -304,7 +269,6 @@ print("\nGenerating non-candidates")
 while (counter < numBursts) and ((intention == "t") or (intention == "c")):
     progressBar(counter, numBursts)
     counter += 1
-    counterFactor = 1
     
     upperTime = 50
     
@@ -326,7 +290,7 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
     # Time duration of the burst
     Wms = 0
     while (Wms < 1):
-        Wms = (np.random.gumbel(0.25,0.09)*80)**1.5     # Draws duration from this distribution
+        Wms = np.random.gumbel(0.13,0.12)*50     # Draws duration from this distribution
     timeRange = Wms/(2*quantFrac)       # Time range for the time distribution of the burst, centered around 0
     
     numPoints = 0       # Number of points in the burst

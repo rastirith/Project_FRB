@@ -23,7 +23,7 @@ def ks_cordes(dmArr,snArr,timeArr,peakDmMean):
     snFreqArr = []          # Probability frequency distribution for the data
     cordesFreqArr = []      # Probability frequency distribution for the theoretical function
     
-    Wms = np.percentile(timeArr,8)-np.percentile(timeArr,2)   # Time width using the quantile method
+    Wms = np.percentile(timeArr,80)-np.percentile(timeArr,20)   # Time width using the quantile method
     Wms = Wms*1000                                              # Must be in milliseconds
     dmScaled = dmArr - peakDmMean                               # Centers the data around DM = 0
     snRatios = (snArr)/(peakSN)                         # Ratios of the SN-values in relation to the peak
@@ -73,28 +73,20 @@ def chiSq(dmArr,snArr, timeArr, peakDmMean):
         chiTerm = ((snRatios[i] - y)**2)/y
         chiSquared += chiTerm
     cS = chiSquared/len(dmArr)
-    print(cS)
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.scatter(dmScaled,snRatios)
-    ax.scatter(dmScaled, cordes)
-    plt.show()
     return cS
 
 
 def featureFile(burstsArr):
-    s = 0
     shape_vals = []
     skew_vals = []
     kurt_vals = []
     kstest_vals = []
-    chi_vals = []
+    #chi_vals = []
     class_vals = []
-    #numBursts = len(burstsArr)
     
     for q in range(len(burstsArr)):
-        #progressBar(q,len(burstsArr))
+        progressBar(q,len(burstsArr))
         
         signalToDm = list(zip(burstsArr[q][:,0], burstsArr[q][:,2]))
         signalToDm = np.array(signalToDm)
@@ -115,11 +107,9 @@ def featureFile(burstsArr):
             tempDM = np.mean(dummy[i][:,0])
             meanSN.append(tempSN)
             meanDM.append(tempDM)
-            
         max_ind = np.argmax(meanSN)     # Finds the index for the highest SN bin value
         
         freq_arr = []       # Probability frequency distribution representation of the DM - SN data
-        
         weight_1 = 0.3      # Score weight if ratio is less than 1 but more than 1 - check_1
         weight_2 = -0.3     # Score weight if ratio is less than 1 - check_1, but more than 1 - check_2
         weight_3 = 1        # Score weight if ratio is less than 1 - check_2
@@ -176,15 +166,15 @@ def featureFile(burstsArr):
         skewness = skew(freq_arr, axis = 0)                 # Skewness feature
         kurt = kurtosis(freq_arr, axis = 0, fisher = True)  # Kurtosis feature
         ks_stat = ks_cordes(signalToDm[:,0],signalToDm[:,1],burstsArr[q][:,1],meanDM[max_ind])     # KS feature
-        chi_stat = chiSq(signalToDm[:,0],signalToDm[:,1],burstsArr[q][:,1],meanDM[max_ind])
+        #chi_stat = chiSq(signalToDm[:,0],signalToDm[:,1],burstsArr[q][:,1],meanDM[max_ind])
 
         # Adds the feature values to the corresponding arrays
         shape_vals.append(shape_conf)
         skew_vals.append(skewness)
         kurt_vals.append(kurt)
         kstest_vals.append(ks_stat)
-        chi_vals.append(chi_stat)
+        #chi_vals.append(chi_stat)
         class_vals.append(burstsArr[q][0][4])
-    print("Mean: " + str(s/20))
+
     return shape_vals, skew_vals, kurt_vals, kstest_vals, class_vals
     
