@@ -6,8 +6,17 @@ import glob, os
 ###NEED TO HANDLE SEPERATE CLUSTERS SO ADD COLUMN TO DATA FILES WITH LABEL
 ###see sourcepaths[16]&8
 
-
-
+"""
+# Creates dataframe for file
+def DF(path):
+    axislabels = ["DM", "Time", "S/N", "Width"]
+    Tfile = open(path,'r')
+    data = np.fromfile(Tfile,np.float32,-1) 
+    c = data.reshape((-1,4))
+    df = pd.DataFrame(c,columns=axislabels)
+    Tfile.close()
+    return df
+"""
 #Import data
 #array of file locations and chosing the file to inspect with path
 source_paths = []
@@ -50,18 +59,19 @@ for i in range(len(DM_stop)):
         
 """print(DM_poss)"""
  
-DF = pd.DataFrame(DM_poss,columns=["DM"])
+df2 = pd.DataFrame(DM_poss,columns=["DM"])
 """print(DF.head)"""
 
 n_s = [] ###testing dm dimensions
 
-for x in range(len(source_paths)):    
+for x in range(0,1):    
     #reading in data files    
     df = pd.read_csv(source_paths[x])
-    """print(df)"""
+    """df = DF(source_paths[x])"""
+    print(df.head())
     df = df.drop(columns=["Class"])
     df = df.round({"DM": 3}) #have to round fp error out of dm
-    print(df)
+    print(df.head())
     
     #set up to seperate candidate files into individual clusters
     cluster_id = np.array(df["Cluster Number"])
@@ -87,12 +97,12 @@ for x in range(len(source_paths)):
         print(dmrange)
         """
         dmrange = np.array([DM[0],DM[-1]])
-        
+        print(np.array(df2["DM"]))
     
         #getting dm range, n dimension value
-        a=DF.loc[DF["DM"] == dmrange[0]].index.item()
-        b=DF.loc[DF["DM"] == dmrange[1]].index.item()
-        
+        a=df2.loc[df2["DM"] == dmrange[0]].index.item()
+        b=df2.loc[df2["DM"] == dmrange[1]].index.item()
+        print(a,b, "Here")
         n=b-a
         
         print("n=", n)
@@ -122,7 +132,7 @@ for x in range(len(source_paths)):
         #find position of data point
         for l in range(len(DM)):
             #dm axis location
-            u = DF.loc[DF["DM"] == DM[l]].index.item()
+            u = df2.loc[df2["DM"] == DM[l]].index.item()
             u = u-a
             u_array.append(u)
             #time axis location
