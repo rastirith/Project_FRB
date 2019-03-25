@@ -51,7 +51,7 @@ x = 0
 """
 
 #filling source_paths from the idir
-for file in glob.glob(os.getcwd() + f"\{Folder}\\"+ "*.dat"):
+for file in glob.glob(os.getcwd() + f"\{Folder}\\*\\"+ "*.dat"):
     
     source_paths.append(file)
     
@@ -96,15 +96,17 @@ timer_1 = [] #creating the first zero
 timer_2 = [] #time downsample/pad
 timer_3 = [] #dm downsample/pad
 timer_4 = [] #save
+timePerK = []
 
 
 
-
-y = 40
+y = 10
 n_s = [] ###testing dm dimensions
-for x in range(0,y):    
+for x in range(len(source_paths)):    
+#for x in range(y):
     #reading in data files    
-    #progressBar(x,y)
+    progressBar(x,len(source_paths))
+    start5 = timer()
     
     
     clusterDF = DF(source_paths[x])
@@ -251,18 +253,22 @@ for x in range(0,y):
         c_id = str(0) #Case of label array containing only 0 i.e generated noise
         
     n_s.append((len(zero3[:,:]),len(zero3[0,:]))) ###testing
-    new_name = source_paths[x].split(f"{Folder}\\")[1].replace(".dat","_m_"+c_id)
+    new_name = source_paths[x].split(f"{Folder}\\")[1].split("\\")[1].replace(".dat","_m_"+c_id)
     #np.savetxt(os.getcwd()+"\matrix_files\\Final\\"+new_name, zero3)
 
-    """
     #temporary for playground
     if c_id == "0":
         np.save(os.getcwd()+"\matrix_files\\Playground2\\Noise\\"+new_name, zero3)
     else:
-        np.save(os.getcwd()+"\matrix_files\\Playground2\\Burst\\"+new_name, zero3)"""
+        np.save(os.getcwd()+"\matrix_files\\Playground2\\Burst\\"+new_name, zero3)
     
+    end5 = timer()
+    timePerK.append((end5 - start5)*1000)
+     
+print("\n")  
 print(np.unique(n_s)) ###testing
 
+print("Total time per 1000 files: " + str(np.mean(timePerK)))
 print(f"Timer 1, read in and form first matrix: {np.mean(timer_1)} s" )
 print(f"Timer 2, Time DS and pad: {np.mean(timer_2)} s" )
 print(f"Timer 3, DM DS and pad: {np.mean(timer_3)} s" )
