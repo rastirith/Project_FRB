@@ -82,6 +82,7 @@ def featureFile(burstsArr):
     skew_vals = []
     kurt_vals = []
     kstest_vals = []
+    reg_vals = []
     #chi_vals = []
     class_vals = []
     
@@ -166,6 +167,7 @@ def featureFile(burstsArr):
         skewness = skew(freq_arr, axis = 0)                 # Skewness feature
         kurt = kurtosis(freq_arr, axis = 0, fisher = True)  # Kurtosis feature
         ks_stat = ks_cordes(signalToDm[:,0],signalToDm[:,1],burstsArr[q][:,1],meanDM[max_ind])     # KS feature
+        reg_stat = stats.linregress(burstsArr[:,1],burstsArr[:,0])[0]
         #chi_stat = chiSq(signalToDm[:,0],signalToDm[:,1],burstsArr[q][:,1],meanDM[max_ind])
 
         # Adds the feature values to the corresponding arrays
@@ -173,6 +175,7 @@ def featureFile(burstsArr):
         skew_vals.append(skewness)
         kurt_vals.append(kurt)
         kstest_vals.append(ks_stat)
+        reg_vals.append(reg_stat)
         #chi_vals.append(chi_stat)
         class_vals.append(burstsArr[q][0][4])
 

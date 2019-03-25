@@ -28,6 +28,7 @@ def clusterOrder(clusterArr):
     lab_arr = np.unique(clusterArr)     # Creates an array containing each unique value of the cluster label array
     for n in range(1, len(lab_arr)):    # Loops through all the possible labels counting from 0 to the number of unique clusters
         clusterArr = np.where(clusterArr == lab_arr[n], n - 1, clusterArr)
+    del lab_arr
     return clusterArr
 
 # Method to create an array of arrays where each index corresponds to a separate cluster
@@ -129,19 +130,16 @@ def cordes(timeArr,peakSN):
     
     x = np.linspace(-1000,1000,10000)   # Generates x-values for the cordes function
     zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*x       # Zeta function in the cordes function
-    
-    first = 0       # Variable indicating whether bottom or top of DM range has been found
+
     bot_dm = 0      # Value of the lower end of the DM range
     top_dm = 0      # Value of the upper end of the DM range
     for i in range(len(x)): # Loops through the x-values and calculates the cordes value in each step
         y = (math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i])
         cordes.append(y)
-        if (y >= SNratio) and (first == 0): # First time the theoretical ratio goes above the actual ratio go in here
+        if (y >= SNratio): # First time the theoretical ratio goes above the actual ratio go in here
             bot_dm = x[i]                   # This x-value corresponds to the bottom DM value
-            first = 1                       # Changes variable value to not go into this statement again
-        if (y <= SNratio) and (first == 1): # First time the theoretical ratio goes below the actual ratio after bottom is found
-            top_dm = x[i]                   # This x-value corresponds to the top DM value
-            break                           # Values have been found, break out of loop
+            top_dm = x[10000 - i]
+            break                         # Values have been found, break out of loop
     dm_range = top_dm - bot_dm              # Theoretical allowed DM range for the current candidate
     return dm_range
 
@@ -203,8 +201,14 @@ KSstat = []
 cordesTimes = []
 
 timesPerMB = []
-firstOrd = []
-secondOrd = []
+
+dmMAX = 1077.4
+tMAX = 50.32576
+
+scaleDUMMY = [[0,0],[0,tMAX],[dmMAX,0],[dmMAX, tMAX]]
+scaleDUMMY = np.array(scaleDUMMY)
+scaler = preprocessing.MinMaxScaler()
+scaler.fit(scaleDUMMY)
 
 # Loops through the whole file space defined by 'source_paths'
 for i in range(0,72): 
@@ -217,7 +221,6 @@ for i in range(0,72):
     
     file = source_paths[path_index]     # Setting which file to open
     df = DF(file) # Creates dataframe from the .dat file
-    orig_X = np.array(df)   # Sets dataframe as a Numpy array
     
     X_db = np.array(df.drop(columns=['Width', 'S/N']))  # Drops width and S/N data for DBScan to run on the DM - Time space
     X = np.array(df)
@@ -231,9 +234,10 @@ for i in range(0,72):
     dm_lim = 0.03*max(points_db[:,0])
     points_new = np.array(points_db[points_db[:,0] > dm_lim])
     
-    X_scaled = preprocessing.MinMaxScaler().fit_transform(points_new) # Rescales the data so that the x- and y-axes get ratio 1:1
+    X_scaled = scaler.transform(points_new) # Rescales the data so that the x- and y-axes get ratio 1:1
+    X_scaled[:,1] = 3*X_scaled[:,1]
     
-    xeps = 0.025     # Radius of circle to look around for additional core points
+    xeps = 0.012     # Radius of circle to look around for additional core points
     xmin = 3         # Number of points within xeps for the point to count as core point
     
     end = timer()
@@ -243,6 +247,12 @@ for i in range(0,72):
     clusters = DBSCAN(eps=xeps, min_samples = xmin).fit_predict(X_scaled)   # Clustering algorithm, returns array with cluster labels for each point
     
     end = timer()
+    del X_scaled
+    del points_new
+    del points_db
+    del X
+    del X_db
+    del df
     timesScan.append(end - start)
 
     # Re-inserts bottom points with labels -1 for RFI
@@ -250,6 +260,8 @@ for i in range(0,72):
     clusters = np.insert(clusters,0,np.full(length,-1))
     
     newArr = np.column_stack((points, clusters[np.newaxis].T))
+    
+    del clusters
     
     # Re-order
     startOrd = timer()
@@ -320,7 +332,7 @@ for i in range(0,72):
         lower = np.quantile(newArr[newArr[:,4] == label][:,1], 0.2)
         if (upper - lower) >= 1:            # If the time between the quantiles is longer than 1s set cluster to RFI
             newArr[:,4] = np.where(newArr[:,4] == label, -1, newArr[:,4])
-            
+
     end = timer()
     timesBurst.append(end - start)
     #break
@@ -483,6 +495,13 @@ for i in range(0,72):
             end2 = timer()
             timesTot.append(end2 - start2)
             timesPerMB.append((end2 - start2)/fileSize)
+            """
+            fig4 = plt.figure()
+            ax4 = fig4.add_subplot(111)
+            ax4.scatter(points[:,1], points[:,0], s = 6, color = '0.7', vmin = -1)
+            ax4.scatter(timeData, dmData, s = 6, color = 'r', vmin = -1)
+            ax4.set_title(str(i))
+            ax4.set_xlabel(str(timeDiff))"""
 
             if (results[0][1] > 0.8):       # If the final rating from Random Forest is more than 0.8 goes in here
                 labNumArray = np.full((len(dmData), 1), labelNumber)
@@ -569,8 +588,6 @@ print("Preprocessing: " + str(np.round(np.mean(timesPre), 4)) + "s")
 print("DBScan: " + str(np.round(np.mean(timesScan), 4)) + "s")
 print("Re-ordering: " + str(np.round(np.mean(timesOrder), 4)) + "s")
 print("Tot re-ordering: " + str(np.round(np.mean(totOrderTime), 4)) + "s")
-print("First ordering: " + str(np.round(np.mean(firstOrd), 4)) + "s")
-print("Second ordering: " + str(np.round(np.mean(secondOrd), 4)) + "s")
 print("Noise condition: " + str(np.round(np.mean(timesNoise), 4)) + "s")
 print("Fraction condition: " + str(np.round(np.mean(timesFrac), 4)) + "s")
 print("DM limit condition: " + str(np.round(np.mean(timesDmlim), 4)) + "s")
