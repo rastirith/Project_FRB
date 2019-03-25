@@ -4,6 +4,10 @@ import pandas as pd
 import glob, os
 import sys
 from timeit import default_timer as timer
+
+
+np.set_printoptions(linewidth = 100)
+
 ###NEED TO HANDLE SEPERATE CLUSTERS SO ADD COLUMN TO DATA FILES WITH LABEL
 ###see sourcepaths[16]&8
 def progressBar(value, endvalue, bar_length=20):
@@ -25,6 +29,18 @@ def DF(path):
     Tfile.close()
     return df
 
+def indexing(arr1, arr2):
+    
+    index = np.argsort(arr1)
+    sorted_arr1 = arr1[index]
+    sorted_index = np.searchsorted(sorted_arr1, arr2)
+    
+    yindex = np.take(index, sorted_index, mode="clip")
+    mask = arr1[yindex] != arr2
+    
+    result = np.ma.array(yindex, mask=mask)
+    return result
+
 #Import data
 #array of file locations and chosing the file to inspect with path
 source_paths = []
@@ -36,6 +52,7 @@ x = 0
 
 #filling source_paths from the idir
 for file in glob.glob(os.getcwd() + f"\{Folder}\\"+ "*.dat"):
+    
     source_paths.append(file)
     
 #make directory for matrix files to go to
@@ -63,15 +80,15 @@ DM_step = df_ddp["DM_step"]
 DM_poss = [0.0] 
 
 for i in range(len(DM_stop)):
-    DM_range=DM_stop[i]-DM_start[i]
-    num=round(DM_range/DM_step[i])
+    DM_range = DM_stop[i]- DM_start[i]
+    num = round(DM_range / DM_step[i])
        
     for j in range(int(num)):
-        DM_poss.append(round(DM_poss[-1]+DM_step[i],3))
+        DM_poss.append(round(DM_poss[-1] + DM_step[i],3))
         
 """print(DM_poss)"""
  
-possDF = pd.DataFrame(DM_poss,columns=["DM"])
+possDF = pd.DataFrame(DM_poss,columns = ["DM"])
 """print(DF.head)"""
 
 
@@ -83,18 +100,18 @@ timer_4 = [] #save
 
 
 
-y=1
+y = 40
 n_s = [] ###testing dm dimensions
 for x in range(0,y):    
     #reading in data files    
-    progressBar(x,y)
+    #progressBar(x,y)
     
     
     clusterDF = DF(source_paths[x])
-    clusterDF = clusterDF.sort_values(by="DM")
-    clusterDF = clusterDF.reset_index(drop=True)
-    clusterDF.DM = clusterDF.DM.astype(float).round(3) #have to round fp error out of dm
     """print(clusterDF)"""
+    clusterDF = clusterDF.sort_values(by = "DM")
+    clusterDF = clusterDF.reset_index(drop = True)
+    clusterDF.DM = clusterDF.DM.astype(float).round(3) #have to round fp error out of dm
     #set up arrays from data
     DM = np.array(clusterDF["DM"])
     TIME = np.array(clusterDF["Time"])
@@ -108,57 +125,56 @@ for x in range(0,y):
     dmrange = np.array(df_dmrange["DM"])
     print(dmrange)
     """
-    dmrange = np.array([DM[0],DM[-1]])
+    dmRange = np.array([DM[0],DM[-1]])
 
-    #getting dm range, n dimension value
-    a=possDF.loc[possDF["DM"] == dmrange[0]].index.item()
-    b=possDF.loc[possDF["DM"] == dmrange[1]].index.item()
-    
-    n=b-a
-    
-  
-    #time range, m dimension 
+    # Getting dm range, n dimension value
+    botDMind = possDF.loc[possDF["DM"] == dmRange[0]].index.item()
+    topDMind = possDF.loc[possDF["DM"] == dmRange[1]].index.item()
+    rows = topDMind - botDMind
+
+    # Time range, m dimension 
     ###same as before
     t_step = 256*(pow(10,-6))
     
-    d= round(np.amin(TIME)/t_step)
-    c= round(np.amax(TIME)/t_step)
+    botTimeInd = round(np.amin(TIME)/t_step)
+    topTimeInd = round(np.amax(TIME)/t_step)
    
-    m = c-d
-    m=int(m)
+    columns = topTimeInd - botTimeInd
+    columns = int(columns)
 
     
-    #matrix construction
-    #zero matrix of required dimension
+    # Matrix construction
+    # Zero matrix of required dimension
     ###+1 to handle the fact you need to count the first value istelf
     
-    zero = np.zeros((n+1,m+1))
+    zero = np.zeros((rows + 1,columns + 1))
+    zeroAlt = np.zeros((rows + 1,columns + 1))
     
-    #find position of data point
+    # Find position of data point
     
     
     #h = DM_poss[DM_poss == DM[:]]
     v = np.round(TIME/t_step) 
-    v = v[:]-d 
+    v = v[:] - botTimeInd
     #print(v)
     
     
     
     start_1=timer()
-    
-    print(len(DM))
+    testDM = np.array(possDF["DM"].values)
+    indices = indexing(testDM,DM) - botDMind
+    dmArange = np.arange(len(DM))
+    zeroAlt[indices,v.astype(int)] = SN[dmArange]
+    end_1 = timer()
+
+    """
     for l in range(len(DM)):
         #dm axis location
-        u = possDF.loc[possDF["DM"] == DM[l]].index.item() - a
-        #print("u: " + str(u))
-        
-        #time axis location
-        
-        
-        #filling position
-        
+        u = possDF.loc[possDF["DM"] == DM[l]].index.item() - botDMind
         zero[u][int(v[l])]=SN[l]
-    end_1 = timer()
+        
+    print((zero == zeroAlt).all())
+    """
     timer_1.append(end_1-start_1)
 
     
@@ -168,82 +184,82 @@ for x in range(0,y):
     r_Tpixels=100
     
     #new time downsampled matrix of wanted size
-    zero2=np.zeros((n+1,r_Tpixels))
+    zero2=np.zeros((rows + 1,r_Tpixels))
     
     #case of needing to pad
-    if m<r_Tpixels:
+    if columns < r_Tpixels:
         start_2 = timer()
-        pad=(r_Tpixels-m)/2
-        pad=round(pad) #amount to pad from the top (~equal on the bottom)
+        pad = (r_Tpixels - columns )/2
+        pad = round(pad) #amount to pad from the top (~equal on the bottom)
         for q in range(len(zero[0,:])):
             ##iterator over num of columns
-            zero2[:,q+pad]=zero[:,q]
+            zero2[:,q+pad] = zero[:,q]
     #case of Time downsample 
         end_2 = timer()
-        timer_2.append(end_2-start_2)
+        timer_2.append(end_2 - start_2)
     
     else:
         start_4 = timer()
         for p in range(len(zero[:,:])):
             ##iterator over num of rows
             #downsample into r_pixels in time axis
-            dummy=np.array_split(zero[p,:],r_Tpixels)
-            dummy2=[]
+            dummy = np.array_split(zero[p,:],r_Tpixels)
+            dummy2 = []
             for j in range(len(dummy)):
                 #take max from each pixel group to give value to new pixel
                 dummy2.append(max(dummy[j]))
             #fill new matrix by rows
-            zero2[p]=dummy2
+            zero2[p] = dummy2
         end_4 = timer()
-        timer_4.append(end_4-start_4)
+        timer_4.append(end_4 - start_4)
     
     ###need to downsample or pad DM dimensions or nothing if n=r_DMpixels
     #pixels wanted in dm axis
-    start_3=timer()
+    start_3 = timer()
     r_DMpixels = 70
     
     #new matrix of required dimensions
-    zero3=np.zeros((r_DMpixels,r_Tpixels))
+    zero3 = np.zeros((r_DMpixels,r_Tpixels))
     #case of needing to pad
     
-    if n<r_DMpixels:
-        pad=(r_DMpixels-n)/2
-        pad=round(pad) #amount to pad from the top (~equal on the bottom)
+    if rows < r_DMpixels:
+        pad = (r_DMpixels-rows)/2
+        pad = round(pad) #amount to pad from the top (~equal on the bottom)
         for q in range(len(zero2[:,:])):
             ##iterator over num of rows
-            zero3[q+pad,:]=zero2[q,:]
+            zero3[q+pad,:] = zero2[q,:]
             
     #case of DM downsample      
     else:
         for i in range(len(zero2[0,:])):
             ##iterator over num of columns
             #downsample into r_pixels in time axis
-            dummy=np.array_split(zero2[:,i],r_DMpixels)
-            dummy2=[]
+            dummy = np.array_split(zero2[:,i],r_DMpixels)
+            dummy2 = []
             for j in range(len(dummy)):
                 dummy2.append(max(dummy[j]))
-            zero3[:,i]=dummy2
-    end_3= timer()
-    timer_3.append(end_3-start_3)
+            zero3[:,i] = dummy2
+    end_3 = timer()
+    timer_3.append(end_3 - start_3)
     #name of matrix file
     
-    c_id= clusterDF["Label"].values
-    if len(np.unique(c_id)) == 2:
-        c_id = str(1)
+    c_id = clusterDF["Label"].values
+    if c_id.any() == 1:
+        c_id = str(1) #Case of label array containing a 1 i.e a generated burst
         
     else:
-        c_id = str(0)
+        c_id = str(0) #Case of label array containing only 0 i.e generated noise
         
     n_s.append((len(zero3[:,:]),len(zero3[0,:]))) ###testing
-    new_name = source_paths[x].split(f"{Folder}\\")[1].split("\\")[1].replace(".dat","_m_"+c_id)
+    new_name = source_paths[x].split(f"{Folder}\\")[1].replace(".dat","_m_"+c_id)
     #np.savetxt(os.getcwd()+"\matrix_files\\Final\\"+new_name, zero3)
 
-    
+    """
     #temporary for playground
     if c_id == "0":
         np.save(os.getcwd()+"\matrix_files\\Playground2\\Noise\\"+new_name, zero3)
     else:
-        np.save(os.getcwd()+"\matrix_files\\Playground2\\Burst\\"+new_name, zero3)
+        np.save(os.getcwd()+"\matrix_files\\Playground2\\Burst\\"+new_name, zero3)"""
     
 print(np.unique(n_s)) ###testing
 
