@@ -33,8 +33,9 @@ Folder = "training_2"
 #file number in source_paths to open
 x = 0
 """
+
 #filling source_paths from the idir
-for file in glob.glob(os.getcwd() + f"\{Folder}\\*\\"+ "*.dat"):
+for file in glob.glob(os.getcwd() + f"\{Folder}\\"+ "*.dat"):
     source_paths.append(file)
     
 #make directory for matrix files to go to
@@ -82,7 +83,7 @@ timer_4 = [] #save
 
 
 
-y=100
+y=1
 n_s = [] ###testing dm dimensions
 for x in range(0,y):    
     #reading in data files    
@@ -140,16 +141,22 @@ for x in range(0,y):
     v = np.round(TIME/t_step) 
     v = v[:]-d 
     #print(v)
+    
+    
+    
     start_1=timer()
+    
+    print(len(DM))
     for l in range(len(DM)):
         #dm axis location
-        
         u = possDF.loc[possDF["DM"] == DM[l]].index.item() - a
+        #print("u: " + str(u))
         
         #time axis location
         
         
         #filling position
+        
         zero[u][int(v[l])]=SN[l]
     end_1 = timer()
     timer_1.append(end_1-start_1)

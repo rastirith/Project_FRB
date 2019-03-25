@@ -47,7 +47,7 @@ quantFrac = 0.8                 # Fraction over which the quantile method to cal
 fraction = 0.75                 # Probability of there being a point in a single DM step
 noiseFraction = 0.5             # Fraction of noise events in a candidate
 
-numBursts = 10                 # Number of bursts to simulate
+numBursts = 5                 # Number of bursts to simulate
 bursts = []                     # All bursts are stored here, array of arrays
 width = []
 

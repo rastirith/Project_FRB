@@ -124,8 +124,9 @@ def candClassifier(label, burstsArr):
     skewness = skew(freq_arr, axis = 0)                 # Skewness feature
     kurt = kurtosis(freq_arr, axis = 0, fisher = True)  # Kurtosis feature
     ks_stat = ks_cordes(dmData,snData,timeData,meanDM[max_ind])     # KS feature
+    reg_stat = stats.linregress(timeData,dmData)[0]
     
     features = [shape_conf, skewness, kurt, ks_stat]       # Arrays of features to be ran through Random Forest model
-    results = clf.predict_proba([features])                 # Runs Random Forest model on features arrays
+    #results = clf.predict_proba([features])                 # Runs Random Forest model on features arrays
     y_pred = clf.predict([features])
     return y_pred
