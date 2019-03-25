@@ -255,6 +255,7 @@ while counter < numBursts:
     
     if intention == "c":
         totArr.reshape(-1)
+        totArr[:,4] = np.array(np.transpose(labArr))
         fileName = "burst_cand_" + str(counter) + ".dat"     # Name of the class file to be created
         totArr.astype(np.float32).tofile(os.getcwd() + '\\odir\\' + folderName + "\\bursts\\" + fileName)
     else:
@@ -406,6 +407,7 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
     
     if intention == "c":
         totArr.reshape(-1)
+        totArr[:,4] = np.array(np.transpose(labArr))
         fileName = "noise_cand_" + str(counter) + ".dat"     # Name of the class file to be created
         totArr.astype(np.float32).tofile(os.getcwd() + '\\odir\\' + folderName + "\\noise\\" + fileName)
     else:
