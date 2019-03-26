@@ -4,6 +4,7 @@ import pandas as pd
 import glob, os
 import sys
 from timeit import default_timer as timer
+from matplotlib import pyplot as plt
 
 
 np.set_printoptions(linewidth = 100)
@@ -44,7 +45,7 @@ def indexing(arr1, arr2):
 #Import data
 #array of file locations and chosing the file to inspect with path
 source_paths = []
-Folder = "training_2"
+Folder = "training_5"
 """
 #file number in source_paths to open
 x = 0
@@ -57,9 +58,9 @@ for file in glob.glob(os.getcwd() + f"\{Folder}\\*\\"+ "*.dat"):
     
 #make directory for matrix files to go to
 try:
-    os.mkdir(os.getcwd()+"\matrix_files\\Playground2\\")
-    os.mkdir(os.getcwd()+"\matrix_files\\Playground2\\Burst\\")
-    os.mkdir(os.getcwd()+"\matrix_files\\Playground2\\Noise\\")
+    os.mkdir(os.getcwd()+"\matrix_files\\Playground3\\")
+    os.mkdir(os.getcwd()+"\matrix_files\\Playground3\\Burst\\")
+    os.mkdir(os.getcwd()+"\matrix_files\\Playground3\\Noise\\")
    
 except:
     pass
@@ -97,15 +98,19 @@ timer_2 = [] #time downsample/pad
 timer_3 = [] #dm downsample/pad
 timer_4 = [] #save
 timePerK = []
+pad7 = []
 
 
 
-y = 10
+y = 1
 n_s = [] ###testing dm dimensions
-for x in range(len(source_paths)):    
-#for x in range(y):
+#for x in range(len(source_paths)):    
+for x in range(y):
+
     #reading in data files    
-    progressBar(x,len(source_paths))
+
+    #progressBar(x,len(source_paths))
+    #progressBar(x, y)
     start5 = timer()
     
     
@@ -150,7 +155,6 @@ for x in range(len(source_paths)):
     ###+1 to handle the fact you need to count the first value istelf
     
     zero = np.zeros((rows + 1,columns + 1))
-    zeroAlt = np.zeros((rows + 1,columns + 1))
     
     # Find position of data point
     
@@ -158,7 +162,8 @@ for x in range(len(source_paths)):
     #h = DM_poss[DM_poss == DM[:]]
     v = np.round(TIME/t_step) 
     v = v[:] - botTimeInd
-    #print(v)
+    #print(columns)
+    #print(rows)
     
     
     
@@ -166,7 +171,7 @@ for x in range(len(source_paths)):
     testDM = np.array(possDF["DM"].values)
     indices = indexing(testDM,DM) - botDMind
     dmArange = np.arange(len(DM))
-    zeroAlt[indices,v.astype(int)] = SN[dmArange]
+    zero[indices,v.astype(int)] = SN[dmArange]
     end_1 = timer()
 
     """
@@ -186,10 +191,11 @@ for x in range(len(source_paths)):
     r_Tpixels=100
     
     #new time downsampled matrix of wanted size
-    zero2=np.zeros((rows + 1,r_Tpixels))
+    #zero2=np.zeros((rows + 1,r_Tpixels))
     
     #case of needing to pad
     if columns < r_Tpixels:
+        zero2=np.zeros((rows + 1,r_Tpixels))
         start_2 = timer()
         pad = (r_Tpixels - columns )/2
         pad = round(pad) #amount to pad from the top (~equal on the bottom)
@@ -197,22 +203,26 @@ for x in range(len(source_paths)):
             ##iterator over num of columns
             zero2[:,q+pad] = zero[:,q]
     #case of Time downsample 
+        
         end_2 = timer()
         timer_2.append(end_2 - start_2)
     
     else:
+        zero2 = np.zeros((r_Tpixels, rows + 1))
+        altZ = np.zeros((r_Tpixels, rows + 1))
+        
         start_4 = timer()
-        for p in range(len(zero[:,:])):
-            ##iterator over num of rows
-            #downsample into r_pixels in time axis
-            dummy = np.array_split(zero[p,:],r_Tpixels)
-            dummy2 = []
-            for j in range(len(dummy)):
-                #take max from each pixel group to give value to new pixel
-                dummy2.append(max(dummy[j]))
-            #fill new matrix by rows
-            zero2[p] = dummy2
+        timeSplit = np.array_split(zero[:,:], r_Tpixels, axis = 1)
+        
+        for k in range(len(timeSplit)):
+            zero2[k] = (timeSplit[k].max(1))
+        
+        zero2 = np.transpose(zero2)
         end_4 = timer()
+        #a[k].max(1) a column of what zero 2 should be ??
+        #temp[:]=a
+        #a[pixel(0-100)][row number]
+
         timer_4.append(end_4 - start_4)
     
     ###need to downsample or pad DM dimensions or nothing if n=r_DMpixels
@@ -225,22 +235,24 @@ for x in range(len(source_paths)):
     #case of needing to pad
     
     if rows < r_DMpixels:
+        start7 = timer()
         pad = (r_DMpixels-rows)/2
         pad = round(pad) #amount to pad from the top (~equal on the bottom)
         for q in range(len(zero2[:,:])):
             ##iterator over num of rows
             zero3[q+pad,:] = zero2[q,:]
-            
+        end7 = timer()
+        pad7.append(end7 - start7)
     #case of DM downsample      
     else:
-        for i in range(len(zero2[0,:])):
-            ##iterator over num of columns
-            #downsample into r_pixels in time axis
-            dummy = np.array_split(zero2[:,i],r_DMpixels)
-            dummy2 = []
-            for j in range(len(dummy)):
-                dummy2.append(max(dummy[j]))
-            zero3[:,i] = dummy2
+        
+        dmSplit = np.array_split(zero2[:,:], r_DMpixels, axis = 0)
+        temp = np.zeros((r_DMpixels,r_Tpixels))
+        
+        for k in range(len(dmSplit)):
+            temp[k] = (dmSplit[k].max(0))
+
+            
     end_3 = timer()
     timer_3.append(end_3 - start_3)
     #name of matrix file
@@ -255,12 +267,12 @@ for x in range(len(source_paths)):
     n_s.append((len(zero3[:,:]),len(zero3[0,:]))) ###testing
     new_name = source_paths[x].split(f"{Folder}\\")[1].split("\\")[1].replace(".dat","_m_"+c_id)
     #np.savetxt(os.getcwd()+"\matrix_files\\Final\\"+new_name, zero3)
-
+    """
     #temporary for playground
     if c_id == "0":
-        np.save(os.getcwd()+"\matrix_files\\Playground2\\Noise\\"+new_name, zero3)
+        np.save(os.getcwd()+"\matrix_files\\Playground3\\Noise\\"+new_name, zero3)
     else:
-        np.save(os.getcwd()+"\matrix_files\\Playground2\\Burst\\"+new_name, zero3)
+        np.save(os.getcwd()+"\matrix_files\\Playground3\\Burst\\"+new_name, zero3)"""
     
     end5 = timer()
     timePerK.append((end5 - start5)*1000)
@@ -269,6 +281,7 @@ print("\n")
 print(np.unique(n_s)) ###testing
 
 print("Total time per 1000 files: " + str(np.mean(timePerK)))
+print("Pad7: " + str(np.mean(pad7)))
 print(f"Timer 1, read in and form first matrix: {np.mean(timer_1)} s" )
 print(f"Timer 2, Time DS and pad: {np.mean(timer_2)} s" )
 print(f"Timer 3, DM DS and pad: {np.mean(timer_3)} s" )
