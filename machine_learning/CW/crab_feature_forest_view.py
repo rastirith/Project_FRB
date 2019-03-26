@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib as mpl
-import glob, os
+import glob, os, sys
 import warnings
 import math
 import pickle
@@ -18,6 +18,14 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 def sort(arr, num):
     xsorted = np.sort(arr)[:num]
     return xsorted
+
+def progressBar(value, endvalue, bar_length=20):
+    
+    percent = float(value) / endvalue
+    arrow = '-' * int(round(percent * bar_length) - 1) + '>'
+    spaces = ' ' * (bar_length - len(arrow))
+    
+    sys.stdout.write("\rPercent: [{0}] {1}%".format(arrow + spaces, int(round(percent * 100))))
 
 # Re-orders a shuffled labels_arr array so that the index of the array and the
 # labels in the labels array has a q-1 relationship counting from q = 0.
@@ -65,10 +73,15 @@ def ks_cordes(dmArr,snArr,timeArr,peakDmMean):
     
     x = np.linspace(min(dmScaled),max(dmScaled),2000)           # X-values for cordes function
     zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*x       # Zeta function, see Cordes & M
-    zeta = np.where(zeta == 0, 0.0000001,zeta)
+    zeta[zeta == 0] = 0.000001
+    
     # Calculates the y-values of the theoretical function
     for i in range(len(x)):
-        cordes.append((math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i]))
+        temp_arr = []
+        y = (math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i])
+        frequency = int(y*100)
+        temp_arr = [x[i]] * frequency
+        cordesFreqArr.extend(temp_arr)
 
     altArr = []
 
@@ -117,22 +130,34 @@ def cordes(timeArr,peakSN):
         cordes.append(y)
         if (y >= SNratio) and (first == 0): # First time the theoretical ratio goes above the actual ratio go in here
             bot_dm = x[i]                   # This x-value corresponds to the bottom DM value
-            first = 1                       # Changes variable value to not go into this statement again
-        if (y <= SNratio) and (first == 1): # First time the theoretical ratio goes below the actual ratio after bottom is found
-            top_dm = x[i]                   # This x-value corresponds to the top DM value
-            break                           # Values have been found, break out of loop
-    dm_range = top_dm - bot_dm              # Theoretical allowed DM range for the current candidate
+            top_dm = x[10000 - i]
+            break
+    dm_range = top_dm - bot_dm
     return dm_range
+
+def lineFit(timeArr, dmArr):
+    reg_stats = stats.linregress(timeData,dmData)
+    sum = 0
+    
+    for i in range(len(timeArr)):
+        y = timeData[i]*reg_stats[0] + reg_stats[1]
+        sum += (dmData[i] - y)**2
+        
+    sdev = (sum/(len(dmData) - 1))**0.5
+    return reg_stats[0], reg_stats[1], sdev
 
 clf = pickle.load(open("model.sav",'rb'))   # Loads the saved Random Forest model
 
 counter = 0     # Counter that counts the candidate number reaching the feature loop
 
 pos_array_mp3 = [
-        8, 20, 22, 24, 1, 3, 7, 30, 31, 74, 71, 101, 102,
-        103, 104, 105, 107, 112, 114, 120, 121, 122, 124,
-        125, 127, 128, 131, 137, 142, 145, 146, 147, 149,
-        150, 153, 133, 151
+        26, 27, 28, 29, 22, 23, 24, 68, 69,
+        66, 67, 63, 64, 57, 58, 61, 62, 59,
+        60, 56, 55, 54, 53, 50, 49, 48, 47,
+        45, 46, 43, 44, 39, 40, 41, 42, 34, 
+        35, 36, 37, 38, 30, 31, 32, 33, 19,
+        20, 21, 16, 17, 18, 11, 12, 13, 14, 
+        15, 6, 2, 3, 4, 1
         ]
 
 pos_array = pos_array_mp3
@@ -167,12 +192,15 @@ class_vals = []     # Array containing the classification labels of the candidat
 #colour cheating
 colours = ["r","g","b","y","k"]*10
 
+slopes = []
+sdev_stats = []
 
-
+y = 5
 
 # Loops through the whole file space defined by 'source_paths'
-for i in range(1,28): 
-    print(i)
+for i in range(24,28): 
+    #print(i)
+    #progressBar(i,y)
     
     fileSize = os.path.getsize(source_paths[i])/1024000
     path_index = i      # Current path index in the source_paths array
@@ -195,7 +223,6 @@ for i in range(1,28):
     """
     X_scaled = scaler.transform(points_db) # Rescales the data so that the x- and y-axes get ratio 1:1
     if len(X_scaled)>10000:
-        print("too long")
         continue
     
     X_scaled[:,1] = 3*X_scaled[:,1] #fixing this time overlap with a stretch
@@ -203,11 +230,7 @@ for i in range(1,28):
     xeps = 0.01     # Radius of circle to look around for additional core points
     xmin = 5  # Number of points within xeps for the point to count as core point
     
-    print("len", len(X_scaled))
-    
     clusters = DBSCAN(eps=xeps, min_samples = xmin).fit_predict(X_scaled)   # Clustering algorithm, returns array with cluster labels for each point
-    
-    print("checkDB\n")
     
     # Re-inserts bottom points with labels -1 for RFI
     length = len(points) - len(clusters)
@@ -283,7 +306,7 @@ for i in range(1,28):
     good = []           # Contains the points of all candidates classified as 'good'
     excellent = []      # Contains the points of all candidates classified as 'excellent'
     labelNumber = 0     # Label number of clusters in same files, used to separate multiple clusters of equal classification
-    print("checkCANDLOOP\n")
+
     # Loops through all remaining clusters to exclude further clusters, calculate feature values, and classify them using Random Forest
     labels = np.unique(newArr[:,4])
     
@@ -291,12 +314,15 @@ for i in range(1,28):
     ax1 = fig1.add_subplot(111)
     ax1.set_title("path"+str(path_index))
     ax1.scatter(points[:,1], points[:,0], s = 6, color = '0.7', vmin = -1)
+    
     for q in range(1,len(labels)):
+        
         
         label = labels[q]
         dmData = newArr[newArr[:,4] == label][:,0]
         timeData = newArr[newArr[:,4] == label][:,1]
         snData = newArr[newArr[:,4] == label][:,2]
+        widthData = newArr[newArr[:,4] == label][:,3]
         
         signalToDm = list(zip(dmData, snData))  # Array containing DM - SN data
         signalToDm = np.array(signalToDm)
@@ -333,7 +359,7 @@ for i in range(1,28):
         # Using 2 times the upper_dm_range to use a large safety margin
         if (max_ind > 4) or (max_ind < 2) or (dm_diff > 2.5*upper_dm_range):  
             newArr[:,4] = np.where(newArr[:,4] == label, -1, newArr[:,4])
-            print(upper_dm_range)
+            #print("here")
         # All candidates that haven't been excluded thus far go in here
         else:
             counter += 1        # Final candidate number reaching this point
@@ -427,27 +453,51 @@ for i in range(1,28):
             tempCandArr = np.column_stack((newArr[newArr[:,4] == label], labNumArray))
             ANY.extend(tempCandArr)
             
-            
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.scatter(signalToDm[:,0], signalToDm[:,1], s = 6)
+            for i in reversed(range(len(np.unique(widthData)))):
+                a = np.nonzero(widthData == np.unique(widthData)[i])[0]
+                colors = np.full((len(a)), i)
+                print(colors)
+
+                ax.scatter(dmData[a], snData[a], vmin = -1, vmax = len(np.unique(widthData)), label = str(np.unique(widthData)[i]), cmap = "gnuplot", c = colors, s = 50*((np.unique(widthData)[i])))
+                #ax.legend()
+                ax.set_xlabel("DM(pc.cm^-3)")
+                ax.set_ylabel("S/N")
             ax.set_title(str(counter))
+            #ax.legend()
+
             #plt.show()
             
+            if (counter in pos_array):
+                #reg_stats = stats.linregress(timeData,dmData)
+                fit = lineFit(timeData, dmData)
+                #sdev_stat =
+                slopes.append(fit[0])
+                sdev_stats.append(fit[2])
+            
             #ax1.scatter(points[:,1], points[:,0], s = 6, color = '0.7', vmin = -1)
-            ax1.scatter(timeData, dmData, s = 6, c = colours[labelNumber], vmin = -1)
+            
+            ax1.scatter(timeData, dmData, s = 6, c = colours[labelNumber], label = counter, vmin = -1)
             
             ax1.set_xlabel(str(timeDiff))
+            ax1.legend()
             plt.show()
+            #print((dmData))
+                
             
-            labelNumber += 1
-               
+            """
             # Adds the correct class label for the cluster to the class_vals array.
             # 1 = candidate, 0 = no candidate
             if (counter in pos_array):
-                class_vals.append(1)
-            else:
-                class_vals.append(0)
+                #reg_stats = stats.linregress(timeData,dmData)
+                fit = lineFit(timeData, dmData)
+                #sdev_stat =
+                slopes.append(fit[0])
+                sdev_stats.append(fit[2])"""
+                
+                
+            labelNumber += 1
     
     
     # Re-order    
@@ -486,7 +536,7 @@ for i in range(1,28):
         
     
     total = np.array(total)         # Sets the total array containing feature values, class labels, and cluster numbers to Numpy array
-    print("checkSAVE\n")
+    """
     if len(total) > 0:              # If the 'total' array contains candidates then go in here
         dataframe = pd.DataFrame({'DM': total[:,0],         # Creates a dataframe with feature values, class labels, and cluster numbers
                                   'Time': total[:,1],
@@ -505,6 +555,17 @@ for i in range(1,28):
     else:                           # If there are no candidates then move the .dat file to the 'empty' directory
         new_path = os.getcwd() + '\\crab_cands\\' + "\\empty\\" + source_paths[path_index].split("crab_cands\\")[1]
         if (os.path.isfile(new_path)) == False:
-            os.rename(file, new_path)
+            os.rename(file, new_path)"""
+progressBar(1,1)
+slopes = np.array(slopes)/1000
+#sdev_stats = np.array(sdev_stats)/1000
+print("\n")# + str(slopes)) 
+#print(str(sdev_stats))    
+print("avg: " + str(np.round(np.mean(slopes),5)) + " DM/ms")
+print("sdev: " + str(np.round(np.mean(sdev_stats),5)) + " DM")
+print("sdev slopes: " + str(np.round(np.std(slopes),5)))
+
+
+
 
          
