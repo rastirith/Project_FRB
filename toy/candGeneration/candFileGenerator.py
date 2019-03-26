@@ -62,6 +62,14 @@ def takeClosest(myList, myNumber):
        return after
     else:
        return before
+   
+def timeGen(tMid, dMid, dmPoint, slope = -1.63653, sdev = 1.44806):
+    
+    intercept = dMid - slope*tMid*1000
+    finalTime = (dmPoint - intercept)/slope
+    
+    return finalTime
+
 
 warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -167,7 +175,8 @@ while counter < numBursts:
         timeMid = np.random.uniform(1,upperTime)                # Average time of detection for a burst
         dmMid = np.random.uniform(dmRangeBot, max(data[:,0]))       # Average DM of the burst
         peakSN = np.random.uniform(snRangeBot, snRangeTop)      # Peak SN of the burst
-        SNratio = np.random.uniform(0.05,0.25)             
+        SNratio = np.random.uniform(0.05,0.25)
+        slope = np.random.normal(-1.63653, 0.55315)             
             
         # Time duration of the burst
         Wms = 0
@@ -200,12 +209,16 @@ while counter < numBursts:
             
                 devSN = np.random.normal(0,stDevSN)   # Deviation from the theoretical SN value for the current point
                 devDM = np.random.normal(0,stDevDM)   # Deviation from the DM value for the current point
-                dmArr.append(takeClosest(DM_poss, dmMid + dmTemp + devDM))   # Adds the actual DM value of the point to an array that has been "pixelated" to match the p-band data
+                
+                dmFinal = takeClosest(DM_poss, np.random.normal(dmMid + dmTemp, 1.44806))
+                dmFinal = takeClosest(DM_poss, dmMid + dmTemp + devDM)
+                dmArr.append(dmFinal)   # Adds the actual DM value of the point to an array that has been "pixelated" to match the p-band data
     
-                zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*(dmTemp + devDM)        # Zeta-function
+                zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*(dmMid + devDM)        # Zeta-function
                 snArr.append(math.pi**(1/2)*0.5*(zeta**-1)*math.erf(zeta)*(peakSN + devSN)) # SN value of the point, including deviation
                 
-                timeVar = 0.000256*(round((timeMid + np.random.uniform(-timeRange,timeRange)/1000) /0.000256))    # Time of detection of the points
+                time = timeGen(timeMid, dmMid, dmFinal)
+                timeVar = 0.000256*(round((time/1000)/0.000256))    # Time of detection of the points
                 
                 tArr.append(timeVar)
                 wArr.append(32)
