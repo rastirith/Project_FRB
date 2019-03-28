@@ -48,9 +48,14 @@ def cordes(Wms,SNratio):
     top_dm = 0      # Value of the upper end of the DM range
     for i in range(len(x)): # Loops through the x-values and calculates the cordes value in each step
         y = (math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i])
-        if (y >= SNratio): # First time the theoretical ratio goes above the actual ratio go in here
-            bot_dm = x[i]                   # This x-value corresponds to the bottom DM value
-            top_dm = x[10000 - i]
+        if ((y >= SNratio)): # First time the theoretical ratio goes above the actual ratio go in here
+            try:
+                bot_dm = x[i]                   # This x-value corresponds to the bottom DM value
+                top_dm = x[10000 - i]
+            except:
+                print(y)
+                print(SNratio)
+                print(zeta[i])
             break
     dm_range = top_dm - bot_dm              # Theoretical allowed DM range for the current candidate
     return dm_range
@@ -68,6 +73,19 @@ def takeClosest(myList, myNumber):
        return after
     else:
        return before
+   
+def timeGen(timeArr, dmArr, snArr, sdev = 1.44806):
+    slope = np.random.normal(-1636.53, 553.15) 
+    peakInd = np.argmax(snArr)
+    peakDM = dmArr[peakInd]
+    peakTime = timeArr[peakInd]
+    
+    intercept = peakDM - slope*peakTime
+    
+    timeShift = ((np.random.normal(dmArr, sdev) - intercept)/slope) - peakTime
+    timeArr = timeArr + timeShift
+
+    return timeArr
 
 #make directory for files to be outputted an inputted if they don't exist
 try:
@@ -182,16 +200,10 @@ while counter < numBursts:
     timeMid = np.random.uniform(1,upperTime)                # Average time of detection for a burst
     dmMid = np.random.uniform(dmRangeBot, dmRangeTop)       # Average DM of the burst
     peakSN = np.random.uniform(snRangeBot, snRangeTop)      # Peak SN of the burst
-    SNratio = np.random.uniform(0.05,0.25)
+    SNratio = np.random.uniform(0.1,0.25)
     
     dmWidthTop = 0.2*dmMid
-    
-    # DM width of a burst
-    """
-    dmWidth = 0
-    while dmWidth <= 20:
-        dmWidth = np.random.normal((dmWidthTop - dmWidthBot)/2,(dmWidthTop - dmWidthBot)/4)
-    # Time duration of the burst"""
+
     Wms = 0
     while (Wms < 1):
         Wms = (np.random.gumbel(0.25,0.09)*80)**1.5     # Draws duration from this distribution
@@ -222,13 +234,16 @@ while counter < numBursts:
         
             devSN = np.random.normal(0,stDevSN)   # Deviation from the theoretical SN value for the current point
             devDM = np.random.normal(0,stDevDM)   # Deviation from the DM value for the current point
-            dmArr.append(takeClosest(DM_poss, dmMid + dmTemp + devDM))   # Adds the actual DM value of the point to an array that has been "pixelated" to match the p-band data
+            
+            #dmFinal = takeClosest(DM_poss, np.random.normal(dmMid + dmTemp, 1.44806))
+            dmFinal = takeClosest(DM_poss, dmMid + dmTemp + devDM)
+            dmArr.append(dmFinal)   # Adds the actual DM value of the point to an array that has been "pixelated" to match the p-band data
 
             zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*(dmTemp + devDM)        # Zeta-function
             snArr.append(math.pi**(1/2)*0.5*(zeta**-1)*math.erf(zeta)*(peakSN + devSN)) # SN value of the point, including deviation
             
-            timeVar = 0.000256*(round((timeMid + np.random.uniform(-timeRange,timeRange)/1000)/0.000256))    # Time of detection of the points
-            #print(timeVar)
+            timeVar = (timeMid + np.random.uniform(-timeRange,timeRange)/1000)    # Time of detection of the points
+                
             tArr.append(timeVar)    # Adds the time to the time array that has been "pixelated" to match the p-band data
             wArr.append(32)
             labArr.append(1)
@@ -244,6 +259,8 @@ while counter < numBursts:
                 tArr.append(noiseTime)
                 wArr.append(32)
                 labArr.append(0)
+                
+    tArr = timeGen(tArr, dmArr, snArr)
                 
         
     # Creates a numpy table of the burst, same format as the standard .dat files
@@ -266,7 +283,7 @@ progressBar(numBursts,numBursts)
 counter = 0
 print("\nGenerating non-candidates")
 
-
+# NOISE
 while (counter < numBursts) and ((intention == "t") or (intention == "c")):
     progressBar(counter, numBursts)
     counter += 1
@@ -397,7 +414,9 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
             tArr.append(round(timeVar,6))    # Adds the time to the time array that has been "pixelated" to match the p-band data
             wArr.append(32)
             labArr.append(0)
-
+            
+    tArr = timeGen(tArr, dmArr, snArr)
+    
     # Creates a numpy table of the burst, same format as the standard .dat files
     totArr = np.zeros([count, 5])
     totArr[:,0] = np.array(np.transpose(dmArr))
