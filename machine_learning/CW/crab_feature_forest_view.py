@@ -135,6 +135,40 @@ def cordes(timeArr,peakSN):
     dm_range = top_dm - bot_dm
     return dm_range
 
+# Method to calculate and return the theoretical DM range span given a certain
+# time duration/width and peak magnitude
+def cordesAlt(widthArr,snArr, dmArr, ix):
+    freq = 0.334
+    bandWidth = 64
+    cordes = []                 # Array containing all theoretical SN-values from the cordes function
+                                
+    a = np.nonzero(widthArr == np.unique(widthArr)[ix])[0]
+    Wms = np.unique(widthArr)[ix]*100
+    #colors = np.full((len(a)), ix)
+    dmStart = np.amin(dmArr[a])
+    dmStop = np.amax(dmArr[a])
+    
+    #Wms = np.linspace(dmStart,dmStop,10000)    # Using the quantile method to calculate the width
+    x = np.linspace(dmStart,dmStop,10000)                              # Generates x-values for the cordes function
+    
+
+    zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*x      # Zeta function in the cordes function
+
+    for i in range(len(widthArr[a])): # Loops through the x-values and calculates the cordes value in each step
+        y = (math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i])
+        cordes.append(y)
+      
+        
+    
+    #widthArr[a] = widthArr[a]/np.argmax(widthArr[a])
+    #ax.scatter(dmArr[a], snArr[a], vmin = -1, alpha = 0.2, vmax = len(np.unique(widthArr)), label = str(np.unique(widthArr)[ix]), cmap = "gnuplot", c = colors, s = 25*((np.unique(widthArr)[ix])))
+    
+    #fig1 = plt.figure()
+    #ax1 = fig1.add_subplot(111)
+    ax.scatter(dmArr[a], cordes, color = "k")
+    #ax1.set_xlim(-0.05, 1.05)
+        
+
 def lineFit(timeArr, dmArr):
     reg_stats = stats.linregress(timeData,dmData)
     sum = 0
@@ -453,21 +487,27 @@ for i in range(24,28):
             tempCandArr = np.column_stack((newArr[newArr[:,4] == label], labNumArray))
             ANY.extend(tempCandArr)
             
+            snNorm = snData/(max(snData))
+            
             fig = plt.figure()
             ax = fig.add_subplot(111)
             for i in reversed(range(len(np.unique(widthData)))):
                 a = np.nonzero(widthData == np.unique(widthData)[i])[0]
                 colors = np.full((len(a)), i)
-                print(colors)
+                
+                #cordesAlt(widthData, snNorm, dmData, i)
 
-                ax.scatter(dmData[a], snData[a], vmin = -1, vmax = len(np.unique(widthData)), label = str(np.unique(widthData)[i]), cmap = "gnuplot", c = colors, s = 50*((np.unique(widthData)[i])))
-                #ax.legend()
-                ax.set_xlabel("DM(pc.cm^-3)")
-                ax.set_ylabel("S/N")
+                ax.scatter(dmData[a], snNorm[a], vmin = -1, vmax = len(np.unique(widthData)), label = str(np.unique(widthData)[i]), cmap = "gnuplot", c = colors, s = 25*((np.unique(widthData)[i])))
+            
+                cordesAlt(widthData, snNorm, dmData, i)
+            ax.set_xlabel("DM")
+            ax.set_ylabel("SN")
             ax.set_title(str(counter))
-            #ax.legend()
+            #ax.set_xlim(-0.05,1.05)
+            #ax.set_ylim(0,7)
+            ax.legend()
 
-            #plt.show()
+            plt.show()
             
             if (counter in pos_array):
                 #reg_stats = stats.linregress(timeData,dmData)

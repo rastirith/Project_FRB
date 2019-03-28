@@ -234,9 +234,9 @@ while counter < numBursts:
                     count += 1
                     noiseDM = np.random.uniform((dmMid + start*1.1 - stDevDM*3), (dmMid + stDevDM*3 - start*1.1))
                     noiseSN = np.random.uniform(0, peakSN*0.8)
-                    noiseTime = timeMid + np.random.uniform(-timeRange,timeRange)/1000
+                    noiseTime = 0.000256*(round((timeMid + np.random.uniform(-timeRange,timeRange)/1000)/0.000256))
                     
-                    dmArr.append(takeClosest(DM_poss, dmMid + dmTemp + devDM))
+                    dmArr.append(takeClosest(DM_poss, noiseDM))
                     snArr.append(noiseSN)
                     tArr.append(noiseTime)
                     wArr.append(32)
