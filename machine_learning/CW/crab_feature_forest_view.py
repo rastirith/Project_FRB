@@ -138,21 +138,21 @@ def cordes(timeArr,peakSN):
 # Method to calculate and return the theoretical DM range span given a certain
 # time duration/width and peak magnitude
 def cordesAlt(widthArr,snArr, dmArr, ix):
-    freq = 0.3
-    bandWidth = 64
+    freq = 1.732
+    bandWidth = 336
     cordes = []                 # Array containing all theoretical SN-values from the cordes function
-    
-    
-                                
+                     
     a = np.nonzero(widthArr == np.unique(widthArr)[ix])[0]
-    Wms = np.unique(widthArr)[ix]*100
+    Wms = np.unique(widthArr)[ix]
     #colors = np.full((len(a)), ix)
     dmStart = np.amin(dmArr[a])
     dmStop = np.amax(dmArr[a])
     
     peakSNind = np.argmax(snArr)
     midDM = dmArr[peakSNind]
-    wSNmax = np.amax(snArr[a])
+    wSNmax = np.amax(snArr)
+    
+    
     
     #Wms = np.linspace(dmStart,dmStop,10000)    # Using the quantile method to calculate the width
     x = np.linspace(-100,100,1000)                              # Generates x-values for the cordes function
@@ -163,9 +163,10 @@ def cordesAlt(widthArr,snArr, dmArr, ix):
     for i in range(len(x)): # Loops through the x-values and calculates the cordes value in each step
         y = (math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i])
         cordes.append(y)
-        
+    
     x += midDM
-    cordes -= 1-wSNmax
+    #newY = snArr[a]/wSNmax
+    #cordes -= 1-wSNmax
     
     #widthArr[a] = widthArr[a]/np.argmax(widthArr[a])
     #ax.scatter(dmArr[a], snArr[a], vmin = -1, alpha = 0.2, vmax = len(np.unique(widthArr)), label = str(np.unique(widthArr)[ix]), cmap = "gnuplot", c = colors, s = 25*((np.unique(widthArr)[ix])))
@@ -503,10 +504,13 @@ for i in range(24,28):
                 colors = np.full((len(a)), i)
                 
                 #cordesAlt(widthData, snNorm, dmData, i)
-
+                
                 ax.scatter(dmData[a], snNorm[a], vmin = -1, vmax = len(np.unique(widthData)), label = str(np.unique(widthData)[i]), cmap = "gnuplot", c = colors, s = 25*((np.unique(widthData)[i])))
-            
-                cordesAlt(widthData, snNorm, dmData, i)
+                
+                altY = snNorm[a]/np.amax(snNorm[a])
+                cordesAlt(widthData, altY, dmData, i)
+                
+                
             ax.set_xlabel("DM")
             ax.set_ylabel("SN")
             ax.set_title(str(counter))
