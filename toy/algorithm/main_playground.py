@@ -10,7 +10,7 @@ from sklearn.cluster import DBSCAN
 from sklearn import preprocessing
 from matplotlib import pyplot as plt
 
-from algClassDef import candClassifier
+from featuring import candClassifier
 
 warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -130,9 +130,9 @@ clf = pickle.load(open("model.sav",'rb'))   # Loads the saved Random Forest mode
 source_paths = []   # Array of file paths to be reviewed
 
 # Loops through all .dat files to store them in the 'source_paths' array
-for file in glob.glob(os.getcwd() + '\candGeneration\\odir\\algTrain1\\' + "*.dat"):
+for file in glob.glob(os.getcwd() + '\\odir\\algTrain4\\' + "*.dat"):
     source_paths.append(file)
-    
+
 """
 try:    # Only creates folders if they don't already exist
     os.mkdir(os.getcwd() + '\idir\\' + "\\candidates")
@@ -206,23 +206,12 @@ for i in range(len(source_paths)):
     # Re-inserts bottom points with labels -1 for RFI
     length = len(points) - len(clusters)
     clusters = np.insert(clusters,0,np.full(length,-1))
-    #print(points)
+
     # Adds column to the points arrays for cluster label
     newArr = np.column_stack((points, clusters[np.newaxis].T))
-    #print(newArr)
+
     # Re-order
     newArr[:,-1] = clusterOrder(newArr[:,-1])
-    
-    """
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.scatter(newArr[:,1], newArr[:,0], s = 3, cmap = "brg", vmin = -1, c = newArr[:,4])
-    ax.set_xlabel(file.split("odir\\")[1])"""
-    """
-    fig1 = plt.figure()
-    ax1 = fig1.add_subplot(111)
-    ax1.scatter(newArr[:,1], newArr[:,0], s = 3, cmap = "Set3", vmin = -1, c = newArr[:,-1])
-    ax1.set_xlabel(file.split("odir\\")[1])"""
     
     # Noise condition for Nevents<Nmin => noise
     N_min = 20 # Tuneable number (set to match Karako)
@@ -275,15 +264,7 @@ for i in range(len(source_paths)):
 
     # Loops through all remaining clusters to exclude further clusters, calculate feature values, and classify them using Random Forest
     labels = np.unique(newArr[:,-1])
-    
-    """
-    fig2 = plt.figure()
-    ax2 = fig2.add_subplot(111)
-    ax2.scatter(newArr[:,1], newArr[:,0], s = 3, cmap = "Set3", vmin = -1, c = newArr[:,-1])
-    ax2.set_xlabel(file.split("odir\\")[1])"""
-    
-    #break
-    #print(len(labels))
+
     for q in range(1,len(labels)):
         #break
         label = labels[q]
@@ -293,22 +274,19 @@ for i in range(len(source_paths)):
         timeData = newArr[newArr[:,-1] == label][:,1]
         snData = newArr[newArr[:,-1] == label][:,2]
         labData = newArr[newArr[:,-1] == label][:,4]
-        """
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        ax.scatter(dmData, snData)"""
         
         if np.mean(labData) > 0.15 and result[0] == 1:
             TP += 1
-            #indices.append(file.split("odir\\algTrain2\\")[1])
-            """
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            ax.scatter(dmData, snData)
-            ax.set_xlabel(label)
-            ax.set_title(file.split("odir\\")[1])"""
         elif np.mean(labData) > 0.15 and result[0] == 0:
             FN += 1
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            ax.scatter(newArr[:,1], newArr[:,0], s = 4)
+            ax.scatter(timeData,dmData, s = 4, color = 'r')
+            
+            fig1 = plt.figure()
+            ax1 = fig1.add_subplot(111)
+            ax1.scatter(dmData, snData, s = 4)
         elif np.mean(labData) < 0.15 and result[0] == 1:
             FP += 1
         elif np.mean(labData) < 0.15 and result[0] == 0:
