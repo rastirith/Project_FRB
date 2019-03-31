@@ -45,7 +45,7 @@ def indexing(arr1, arr2):
 #Import data
 #array of file locations and chosing the file to inspect with path
 source_paths = []
-Folder = "training_5"
+Folder = "training_6"
 """
 #file number in source_paths to open
 x = 0
@@ -100,16 +100,14 @@ timer_4 = [] #save
 timePerK = []
 pad7 = []
 
-
-
-y = 1
+y = 20000
 n_s = [] ###testing dm dimensions
 #for x in range(len(source_paths)):    
 for x in range(y):
 
     #reading in data files    
 
-    #progressBar(x,len(source_paths))
+    progressBar(x,len(source_paths))
     #progressBar(x, y)
     start5 = timer()
     
@@ -118,10 +116,10 @@ for x in range(y):
     """print(clusterDF)"""
     clusterDF = clusterDF.sort_values(by = "DM")
     clusterDF = clusterDF.reset_index(drop = True)
-    clusterDF.DM = clusterDF.DM.astype(float).round(3) #have to round fp error out of dm
+    clusterDF["DM"] = clusterDF["DM"].astype(float).round(3) #have to round fp error out of dm
     #set up arrays from data
     DM = np.array(clusterDF["DM"])
-    TIME = np.array(clusterDF["Time"])
+    TIME = np.array(clusterDF["Time"], dtype = np.float64)
     SN = np.array(clusterDF["S/N"])
     
     
@@ -143,13 +141,10 @@ for x in range(y):
     ###same as before
     t_step = 256*(pow(10,-6))
     
-    botTimeInd = round(np.amin(TIME)/t_step)
-    topTimeInd = round(np.amax(TIME)/t_step)
-   
-    columns = topTimeInd - botTimeInd
-    columns = int(columns)
+    botTimeInd = (np.amin(TIME)/t_step)
+    topTimeInd = (np.amax(TIME)/t_step)
+    columns = int(round(topTimeInd - botTimeInd))
 
-    
     # Matrix construction
     # Zero matrix of required dimension
     ###+1 to handle the fact you need to count the first value istelf
@@ -157,15 +152,9 @@ for x in range(y):
     zero = np.zeros((rows + 1,columns + 1))
     
     # Find position of data point
-    
-    
     #h = DM_poss[DM_poss == DM[:]]
-    v = np.round(TIME/t_step) 
+    v = np.round(TIME/t_step)
     v = v[:] - botTimeInd
-    #print(columns)
-    #print(rows)
-    
-    
     
     start_1=timer()
     testDM = np.array(possDF["DM"].values)

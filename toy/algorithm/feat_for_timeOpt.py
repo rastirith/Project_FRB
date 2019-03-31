@@ -54,12 +54,13 @@ def clusterSort(clusterArr, pointsArr):
 
 # Creates dataframe for file
 def DF(path):
-    axislabels = ["DM", "Time", "S/N", "Width"]
+    axislabels = ["DM", "Time", "S/N", "Width", "Label"]
     Tfile = open(path,'r')
     data = np.fromfile(Tfile,np.float32,-1) 
-    c = data.reshape((-1,4))
+    c = data.reshape((-1,5))
     df = pd.DataFrame(c,columns=axislabels)
     Tfile.close()
+    
     return df
 
 # Conducts the 2d KS-test on the SN-DM distribution and the theoretical cordes equation
@@ -159,8 +160,9 @@ pos_array = pos_array_mp3
 source_paths = []   # Array of file paths to be reviewed
 
 # Loops through all .dat files to store them in the 'source_paths' array
-for file in glob.glob(os.getcwd() + '\idir\\' + "*.dat"):
+for file in glob.glob(os.getcwd() + '\\idir\\train_2\\' + "*.dat"):
     source_paths.append(file)
+
 
 try:    # Only creates folders if they don't already exist
     os.mkdir(os.getcwd() + '\idir\\' + "\\candidates")
@@ -211,7 +213,7 @@ scaler = preprocessing.MinMaxScaler()
 scaler.fit(scaleDUMMY)
 
 # Loops through the whole file space defined by 'source_paths'
-for i in range(0,72): 
+for i in range(0,50): 
     orderTime = 0
     fileSize = os.path.getsize(source_paths[i])/1024000
     start2 = timer()
@@ -222,7 +224,7 @@ for i in range(0,72):
     file = source_paths[path_index]     # Setting which file to open
     df = DF(file) # Creates dataframe from the .dat file
     
-    X_db = np.array(df.drop(columns=['Width', 'S/N']))  # Drops width and S/N data for DBScan to run on the DM - Time space
+    X_db = np.array(df.drop(columns=['Width', 'S/N', 'Label']))  # Drops width and S/N data for DBScan to run on the DM - Time space
     X = np.array(df)
     
     # Sorts the data points by DM
@@ -400,7 +402,7 @@ for i in range(0,72):
         timesRange.append(end - start)
         # Condition that excludes the candidates with SN peaks too far from the centre, as well as candidates spanning a range that is too wide
         # Using 2 times the upper_dm_range to use a large safety margin
-        if (max_ind > 4) or (max_ind < 2) or (dm_diff > 2*upper_dm_range):  
+        if (max_ind > 4) or (max_ind < 2):# or (dm_diff > 2*upper_dm_range):  
             newArr[:,4] = np.where(newArr[:,4] == label, -1, newArr[:,4])
 
             end2 = timer()
@@ -482,7 +484,7 @@ for i in range(0,72):
             kurt_vals.append(kurt)
             kstest_vals.append(ks_stat)
             
-            features = [shape_conf, 0, skewness, kurt, ks_stat]       # Arrays of features to be ran through Random Forest model
+            features = [shape_conf, skewness, kurt, ks_stat]       # Arrays of features to be ran through Random Forest model
             start = timer()
             results = clf.predict_proba([features])                             # Runs Random Forest model on features arrays
             end = timer()
