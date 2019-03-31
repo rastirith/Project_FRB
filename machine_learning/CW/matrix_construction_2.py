@@ -100,14 +100,14 @@ timer_4 = [] #save
 timePerK = []
 pad7 = []
 
-y = 40
+y = 20000
 n_s = [] ###testing dm dimensions
 #for x in range(len(source_paths)):    
 for x in range(y):
 
     #reading in data files    
 
-    #progressBar(x,len(source_paths))
+    progressBar(x,len(source_paths))
     #progressBar(x, y)
     start5 = timer()
     

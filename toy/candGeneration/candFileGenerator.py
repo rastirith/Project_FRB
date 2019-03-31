@@ -156,7 +156,7 @@ for i in range(len(DM_stop)):
 
 print("\nGenerating candidates")
 while counter < numBursts:
-    #progressBar(counter, numBursts)
+    progressBar(counter, numBursts)
     path_index = int(round(np.random.uniform(0,len(source_paths) - 1)))
     file = source_paths[path_index]      # Setting which file to open
     data = np.array(DF(file))   # Creates dataframe from the .dat file
@@ -188,7 +188,7 @@ while counter < numBursts:
             
         # Time duration of the burst
         Wms = 0
-        while (Wms < 1):
+        while (Wms < dmMid/25):
             Wms = np.random.gumbel(0.13,0.12)*50     # Draws duration from this distribution
         timeRange = Wms/(2*quantFrac)       # Time range for the time distribution of the burst, centered around 0
         
