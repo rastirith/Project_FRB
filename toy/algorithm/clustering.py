@@ -129,6 +129,6 @@ def cluster(path):
 
     end7 = timer()
     timer7.append(end7 - start7)
-    print("Clustering in module: ", np.mean(timer7))
+    #print("Clustering in module: ", np.mean(timer7))
     
     return newArr, labels

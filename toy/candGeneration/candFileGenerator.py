@@ -10,6 +10,7 @@ import sys
 from bisect import bisect_left
 
 
+
 # Creates dataframe for file
 def DF(path):
     axislabels = ["DM", "Time", "S/N", "Width"]
