@@ -10,6 +10,7 @@ from sklearn.cluster import DBSCAN
 from sklearn import preprocessing
 from scipy.stats import skew, kurtosis
 from matplotlib import pyplot as plt
+from bisect import bisect_left
 
 warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -138,22 +139,27 @@ def cordes(timeArr,peakSN):
 # Method to calculate and return the theoretical DM range span given a certain
 # time duration/width and peak magnitude
 def cordesAlt(widthArr,snArr, dmArr, ix):
-    freq = 0.3
-    bandWidth = 64
+    freq = 1.732
+    bandWidth = 336
     cordes = []                 # Array containing all theoretical SN-values from the cordes function
     
     
                                 
     a = np.nonzero(widthArr == np.unique(widthArr)[ix])[0]
-    Wms = np.unique(widthArr)[ix]*100
+    Wms = np.unique(widthArr)[ix]
     #colors = np.full((len(a)), ix)
     dmStart = np.amin(dmArr[a])
     dmStop = np.amax(dmArr[a])
     
     peakSNind = np.argmax(snArr)
     midDM = dmArr[peakSNind]
-    wSNmax = np.amax(snArr[a])
+    #print("a\n",a)
     
+    #print()
+    #wSNmax = np.amax(snArr[a])
+    
+    #wpeakSNind = a[np.argmax(snArr[a])]
+    #wmidDM = dmArr[wpeakSNind]
     #Wms = np.linspace(dmStart,dmStop,10000)    # Using the quantile method to calculate the width
     x = np.linspace(-100,100,1000)                              # Generates x-values for the cordes function
     
@@ -165,7 +171,8 @@ def cordesAlt(widthArr,snArr, dmArr, ix):
         cordes.append(y)
         
     x += midDM
-    cordes -= 1-wSNmax
+    #x -= midDM-wmidDM
+    #cordes -= 1-wSNmax
     
     #widthArr[a] = widthArr[a]/np.argmax(widthArr[a])
     #ax.scatter(dmArr[a], snArr[a], vmin = -1, alpha = 0.2, vmax = len(np.unique(widthArr)), label = str(np.unique(widthArr)[ix]), cmap = "gnuplot", c = colors, s = 25*((np.unique(widthArr)[ix])))
@@ -186,6 +193,21 @@ def lineFit(timeArr, dmArr):
         
     sdev = (sum/(len(dmData) - 1))**0.5
     return reg_stats[0], reg_stats[1], sdev
+
+# Finds the closest value to a myNumber in sorted myList 
+def takeClosest(myList, myNumber):
+    
+    pos = bisect_left(myList, myNumber) #bisection search to return and index
+    if pos == 0:
+        return myList[0]    #before range of list return first value
+    if pos == len(myList):
+        return myList[-1]   #outside range return last value
+    before = myList[pos - 1]    #valude 1 index prior
+    after = myList[pos]     #value 1 index later
+    if after - myNumber < myNumber - before:
+       return after
+    else:
+       return before
 
 clf = pickle.load(open("model.sav",'rb'))   # Loads the saved Random Forest model
 
@@ -239,7 +261,7 @@ sdev_stats = []
 y = 5
 
 # Loops through the whole file space defined by 'source_paths'
-for i in range(24,28): 
+for i in range(12,28): 
     #print(i)
     #progressBar(i,y)
     
@@ -292,10 +314,6 @@ for i in range(24,28):
     
     plt.show()
     """      
-    
-    
-    
-    
     
     """
     # Noise condition for Nevents<Nmin => noise
@@ -494,24 +512,40 @@ for i in range(24,28):
             tempCandArr = np.column_stack((newArr[newArr[:,4] == label], labNumArray))
             ANY.extend(tempCandArr)
             
+            
             snNorm = snData/(max(snData))
+            
+            compare = np.arange(0,500,0.064*10)
+            somelist = []
+            for i in widthData:
+                b = takeClosest(compare,i)
+                
+                somelist.append(b)
+            widthData2 = np.array(somelist)
+            #print(widthData)
             
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            for i in reversed(range(len(np.unique(widthData)))):
-                a = np.nonzero(widthData == np.unique(widthData)[i])[0]
+            #print(np.unique(widthData2))
+            if len(np.unique(widthData2))<5:
+                continue
+            
+            for i in reversed(range(0,3)):
+                a = np.nonzero(widthData2 == np.unique(widthData2)[i])[0]
                 colors = np.full((len(a)), i)
                 
                 #cordesAlt(widthData, snNorm, dmData, i)
-
-                ax.scatter(dmData[a], snNorm[a], vmin = -1, vmax = len(np.unique(widthData)), label = str(np.unique(widthData)[i]), cmap = "gnuplot", c = colors, s = 25*((np.unique(widthData)[i])))
-            
-                cordesAlt(widthData, snNorm, dmData, i)
+               
+                ax.scatter(dmData[a], (snNorm[a]), vmin = -1, vmax = len(np.unique(widthData2)), label = str(np.unique(widthData)[i]), cmap = "gnuplot", c = colors)#, s = 25*((np.unique(widthData)[i])))
+                for j in range(len(np.unique(widthData))):
+                    
+                    cordesAlt(widthData, snNorm, dmData, j)
+                
             ax.set_xlabel("DM")
             ax.set_ylabel("SN")
             ax.set_title(str(counter))
             ax.set_xlim(np.amin(dmData),np.amax(dmData))
-            ax.set_ylim(-0.05,1.05)
+            #ax.set_ylim(-0.05,1.05)
             #ax.legend()
 
             plt.show()
