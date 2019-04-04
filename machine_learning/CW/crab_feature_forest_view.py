@@ -240,7 +240,7 @@ sdev_stats = []
 y = 5
 
 # Loops through the whole file space defined by 'source_paths'
-for i in range(24,28): 
+for i in range(26,27): 
     #print(i)
     #progressBar(i,y)
     
@@ -496,26 +496,165 @@ for i in range(24,28):
             ANY.extend(tempCandArr)
             
             snNorm = snData/(max(snData))
-            
+            print("count: ", counter)
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            for i in reversed(range(len(np.unique(widthData)))):
-                a = np.nonzero(widthData == np.unique(widthData)[i])[0]
-                colors = np.full((len(a)), i)
+            freq = 1.732
+            bandWidth = 336
+            
+            if counter == 1:
+                fSNarr = []
+                sSNarr = []
+                tSNarr = []
+                foSNarr = []
+                pSNarr = []
+                logSN = []
+                logWidth = np.log([0.192, 2.176, 4.352, 8.704, 17.408])
+                logSN.append(np.log(169))
                 
-                #cordesAlt(widthData, snNorm, dmData, i)
+                dmRange = np.arange(-30, +30, 0.1)
+                #2.176
+                inds1 = np.nonzero((widthData == 2.176) & (snData > 20))
+                sliceDM1 = dmData[inds1]
+                sliceSN1 = snData[inds1]
+                fRange = max(sliceDM1) - min(sliceDM1)
+                zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(2.176**-1)*(fRange/2)
+                fRat = (math.pi**(1/2)*0.5*(zeta**-1)*math.erf(zeta))
+                fPeak = np.mean(sliceSN1)/fRat
+                zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(2.176**-1)*(dmRange)
+                zeta[zeta == 0] = 0.000001
+                for i in range(len(dmRange)):
+                    fSNarr.append((math.pi**(1/2)*0.5*(zeta[i]**-1)*math.erf(zeta[i]))*fPeak)
+                logSN.append(np.log(max(sliceSN1)))
                 
-                ax.scatter(dmData[a], snNorm[a], vmin = -1, vmax = len(np.unique(widthData)), label = str(np.unique(widthData)[i]), cmap = "gnuplot", c = colors, s = 25*((np.unique(widthData)[i])))
                 
-                altY = snNorm[a]/np.amax(snNorm[a])
-                cordesAlt(widthData, altY, dmData, i)
+                #4.352
+                inds2 = np.nonzero((widthData == 4.352) & (snData > 20))
+                sliceDM2 = dmData[inds2]
+                sliceSN2 = snData[inds2]
+                sRange = max(sliceDM2) - min(sliceDM2)
+                zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(4.352**-1)*(sRange/2)
+                sRat = (math.pi**(1/2)*0.5*(zeta**-1)*math.erf(zeta))
+                sPeak = np.mean(sliceSN2)/sRat
+                zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(4.352**-1)*(dmRange)
+                zeta[zeta == 0] = 0.000001
+                for i in range(len(dmRange)):
+                    sSNarr.append((math.pi**(1/2)*0.5*(zeta[i]**-1)*math.erf(zeta[i]))*sPeak)
+                logSN.append(np.log(max(sliceSN2)))
+                
+                #8.704
+                inds3 = np.nonzero((widthData == 8.704) & (snData > 15) & (dmData > 47))
+                sliceDM3 = dmData[inds3]
+                sliceSN3 = snData[inds3]
+                tRange = max(sliceDM3) - min(sliceDM3)
+                zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(8.704**-1)*(tRange/2)
+                tRat = (math.pi**(1/2)*0.5*(zeta**-1)*math.erf(zeta))
+                tPeak = np.mean(sliceSN3)/tRat
+                zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(8.704**-1)*(dmRange)
+                zeta[zeta == 0] = 0.000001
+                for i in range(len(dmRange)):
+                    tSNarr.append((math.pi**(1/2)*0.5*(zeta[i]**-1)*math.erf(zeta[i]))*tPeak)
+                logSN.append(np.log(max(sliceSN3)))
+                
+                #17.408
+                inds4 = np.nonzero((widthData == 17.408) & (snData > 10))
+                sliceDM4 = dmData[inds4]
+                sliceSN4 = snData[inds4]
+                foRange = max(sliceDM4) - min(sliceDM4)
+                zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(17.408**-1)*(20)
+                foRat = (math.pi**(1/2)*0.5*(zeta**-1)*math.erf(zeta))
+                foPeak = np.mean(sliceSN4)/foRat
+                zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(17.408**-1)*(dmRange)
+                zeta[zeta == 0] = 0.000001
+                for i in range(len(dmRange)):
+                    foSNarr.append((math.pi**(1/2)*0.5*(zeta[i]**-1)*math.erf(zeta[i]))*foPeak)
+                logSN.append(np.log(max(sliceSN4)))  
+                    
+                zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(0.192**-1)*(dmRange)
+                zeta[zeta == 0] = 0.000001
+                for i in range(len(dmRange)):
+                    pSNarr.append((math.pi**(1/2)*0.5*(zeta[i]**-1)*math.erf(zeta[i]))*169.632)
+                
+                print("2.176ms range: ", fRange , "\n4.352ms range: ", sRange, "\n8.704ms range: ", tRange, "\n17.408ms range: ", foRange)
+                print("2.176ms ratio: ", fRat , "\n4.352ms ratio: ", sRat, "\n8.704ms ratio: ", tRat, "\n17.408ms ratio: ", foRat)
+                print("2.176ms factor: ", fPeak , "\n4.352ms factor: ", sPeak, "\n8.704ms factor: ", tPeak, "\n17.408ms factor: ", foPeak)
                 
                 
+                
+                inds1 = np.nonzero((widthData == 2.176))
+                sliceDM1 = dmData[inds1]
+                sliceSN1 = snData[inds1]
+                inds2 = np.nonzero((widthData == 4.352))
+                sliceDM2 = dmData[inds2]
+                sliceSN2 = snData[inds2]
+                inds3 = np.nonzero((widthData == 8.704))
+                sliceDM3 = dmData[inds3]
+                sliceSN3 = snData[inds3]
+                inds4 = np.nonzero((widthData == 17.408))
+                sliceDM4 = dmData[inds4]
+                sliceSN4 = snData[inds4]
+                
+                for m in range(1,11):
+                    temp = []
+                    zeta = (6.91*10**-3)*bandWidth*(freq**-3)*((0.5*m)**-1)*(dmRange)
+                    zeta[zeta == 0] = 0.000001
+                    for i in range(len(dmRange)):
+                        temp.append((math.pi**(1/2)*0.5*(zeta[i]**-1)*math.erf(zeta[i]))*169.632)
+                    xRange = dmRange + 57
+                    ax.plot(xRange, temp, c = "k", alpha = 0.2)
+
+                dmRange += 57
+                #logSN = []
+                for i in reversed(range(len(np.unique(widthData)))):
+                    a = np.nonzero(widthData == np.unique(widthData)[i])[0]
+                    colors = np.full((len(a)), i)
+                    
+                    #cordesAlt(widthData, snNorm, dmData, i)
+                    #logSN.append(np.log(max(snData[a])))
+                    #print(logSN)
+                    b = ax.scatter(dmData[a], snData[a], vmin = -1, vmax = len(np.unique(widthData)), label = str(np.unique(widthData)[i]), cmap = "gnuplot", c = colors, s = 6)#, s = 25*((np.unique(widthData)[i])))
+                    
+                    altY = snNorm[a]/np.amax(snNorm[a])
+                    #print(str(np.unique(widthData)[i]))
+                    #cordesAlt(widthData, altY, dmData, i)
+                    
+                
+                
+                
+                fig2 = plt.figure()
+                ax2 = fig2.add_subplot(111)
+                ax2.scatter(widthData, snData)
+                
+                slope = stats.linregress(logWidth,logSN)[0]
+                intercept = stats.linregress(logWidth,logSN)[1]
+                
+                x = np.log(np.arange(0.180, 80, 0.001))
+                #print(len(x))
+                y = np.exp(slope*x)*np.exp(intercept)
+                #print(len(y))
+                x = np.exp(x)
+                #print(y)
+                #y = slope*logWidth + intercept
+                
+                ax2.plot(x, y, alpha = 0.5)
+                
+            ax.scatter(sliceDM1, sliceSN1, c = "g", s = 6)
+            ax.scatter(sliceDM2, sliceSN2, c = "c", s = 6)
+            ax.scatter(sliceDM3, sliceSN3, c = "g", s = 6)
+            ax.scatter(sliceDM4, sliceSN4, c = "c", s = 6)
+                    
+            ax.plot(dmRange, fSNarr, c = "k", alpha = 0.3)
+            ax.plot(dmRange, sSNarr, c = "k", alpha = 0.3)
+            ax.plot(dmRange, tSNarr, c = "k", alpha = 0.3)
+            ax.plot(dmRange, foSNarr, c = "k", alpha = 0.3)
+            ax.plot(dmRange, pSNarr, c = "k", alpha = 0.3)        
+            
+            ax.figure.colorbar(b, ax=ax)
             ax.set_xlabel("DM")
             ax.set_ylabel("SN")
             ax.set_title(str(counter))
-            ax.set_xlim(np.amin(dmData),np.amax(dmData))
-            ax.set_ylim(-0.05,1.05)
+            #ax.set_xlim(np.amin(dmData),np.amax(dmData))
+            #ax.set_ylim(-0.05,1.05)
             #ax.legend()
 
             plt.show()
@@ -533,7 +672,7 @@ for i in range(24,28):
             
             ax1.set_xlabel(str(timeDiff))
             ax1.legend()
-            plt.show()
+            #plt.show()
             #print((dmData))
                 
             
