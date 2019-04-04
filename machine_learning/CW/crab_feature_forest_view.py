@@ -142,9 +142,7 @@ def cordesAlt(widthArr,snArr, dmArr, ix):
     freq = 1.732
     bandWidth = 336
     cordes = []                 # Array containing all theoretical SN-values from the cordes function
-    
-    
-                                
+                     
     a = np.nonzero(widthArr == np.unique(widthArr)[ix])[0]
     Wms = np.unique(widthArr)[ix]
     #colors = np.full((len(a)), ix)
@@ -153,10 +151,16 @@ def cordesAlt(widthArr,snArr, dmArr, ix):
     
     peakSNind = np.argmax(snArr)
     midDM = dmArr[peakSNind]
+<<<<<<< HEAD
     #print("a\n",a)
     
     #print()
     #wSNmax = np.amax(snArr[a])
+=======
+    wSNmax = np.amax(snArr)
+    
+    
+>>>>>>> fa898fb2eb1fbdd3caf500d76c061394a7ec83c1
     
     #wpeakSNind = a[np.argmax(snArr[a])]
     #wmidDM = dmArr[wpeakSNind]
@@ -169,9 +173,13 @@ def cordesAlt(widthArr,snArr, dmArr, ix):
     for i in range(len(x)): # Loops through the x-values and calculates the cordes value in each step
         y = (math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i])
         cordes.append(y)
-        
+    
     x += midDM
+<<<<<<< HEAD
     #x -= midDM-wmidDM
+=======
+    #newY = snArr[a]/wSNmax
+>>>>>>> fa898fb2eb1fbdd3caf500d76c061394a7ec83c1
     #cordes -= 1-wSNmax
     
     #widthArr[a] = widthArr[a]/np.argmax(widthArr[a])
@@ -535,11 +543,20 @@ for i in range(12,28):
                 colors = np.full((len(a)), i)
                 
                 #cordesAlt(widthData, snNorm, dmData, i)
+<<<<<<< HEAD
                
                 ax.scatter(dmData[a], (snNorm[a]), vmin = -1, vmax = len(np.unique(widthData2)), label = str(np.unique(widthData)[i]), cmap = "gnuplot", c = colors)#, s = 25*((np.unique(widthData)[i])))
                 for j in range(len(np.unique(widthData))):
                     
                     cordesAlt(widthData, snNorm, dmData, j)
+=======
+                
+                ax.scatter(dmData[a], snNorm[a], vmin = -1, vmax = len(np.unique(widthData)), label = str(np.unique(widthData)[i]), cmap = "gnuplot", c = colors, s = 25*((np.unique(widthData)[i])))
+                
+                altY = snNorm[a]/np.amax(snNorm[a])
+                cordesAlt(widthData, altY, dmData, i)
+                
+>>>>>>> fa898fb2eb1fbdd3caf500d76c061394a7ec83c1
                 
             ax.set_xlabel("DM")
             ax.set_ylabel("SN")
