@@ -3,6 +3,7 @@ from scipy.stats import skew, kurtosis
 from scipy import stats
 import math
 import pickle
+from timeit import default_timer as timer
 
 clf = pickle.load(open("model.sav",'rb'))   # Loads the saved Random Forest model
 
@@ -78,7 +79,7 @@ def cordes(timeArr,peakSN):
 
 
 def writer(label, burstsArr, intention):
-    
+    start4 = timer()
     valid = ['predict', 'calc']
     if intention not in valid:
         raise ValueError("Intention argument must be one of %r." % valid)
@@ -120,7 +121,7 @@ def writer(label, burstsArr, intention):
     
     
     if (max_ind > 4) or (max_ind < 2):
-            rating = 0
+            return 0
     else:
         for i in range(max_ind - 1, -1, -1):                # Loops through all bins from the peak bin moving to the left
             ratio=meanSN[i]/meanSN[i+1]                     # Ratio of the next bin to the previous bin
@@ -146,32 +147,35 @@ def writer(label, burstsArr, intention):
             else:
                 rating += weight_4*score[i-max_ind-1]
             
-    # Exception case where rating is less than 0, sets rating to 0 if this happens
-    if rating < 0:
-        rating = 0
-    
-    # Converts the S/N-DM plot into a probability frequency plot
-    # Instead of each point in DM space having a corresponding S/N y-value
-    # there will be an array containing a number of DM elements proportional to its S/N value
-    normal_snRatios = snData/(max(snData))
-    for i in range(len(dmData)):
-        temp_arr = []
-        frequency = int((normal_snRatios[i])*1000)      # Needs to be an integer, timed it by 1000 to reduce rounding errors, proportions still same
-        temp_arr = [dmData[i]] * frequency           # Creates the corresponding number of elements and adds it to the array
-        freq_arr.extend(temp_arr)
+        # Exception case where rating is less than 0, sets rating to 0 if this happens
+        if rating < 0:
+            rating = 0
         
-    # FEATURES
-    shape_conf = rating/max_score                       # Shafe conf feature
-    skewness = skew(freq_arr, axis = 0)                 # Skewness feature
-    kurt = kurtosis(freq_arr, axis = 0, fisher = True)  # Kurtosis feature
-    ks_stat = ks_cordes(dmData,snData,timeData,meanDM[max_ind])     # KS feature
-    reg_stat = stats.linregress(timeData,dmData)[0]
+        # Converts the S/N-DM plot into a probability frequency plot
+        # Instead of each point in DM space having a corresponding S/N y-value
+        # there will be an array containing a number of DM elements proportional to its S/N value
+        normal_snRatios = snData/(max(snData))
+        for i in range(len(dmData)):
+            temp_arr = []
+            frequency = int((normal_snRatios[i])*1000)      # Needs to be an integer, timed it by 1000 to reduce rounding errors, proportions still same
+            temp_arr = [dmData[i]] * frequency           # Creates the corresponding number of elements and adds it to the array
+            freq_arr.extend(temp_arr)
+            
+        # FEATURES
+        shape_conf = rating/max_score                       # Shafe conf feature
+        skewness = skew(freq_arr, axis = 0)                 # Skewness feature
+        kurt = kurtosis(freq_arr, axis = 0, fisher = True)  # Kurtosis feature
+        ks_stat = ks_cordes(dmData,snData,timeData,meanDM[max_ind])     # KS feature
+        reg_stat = stats.linregress(timeData,dmData)[0]
+
         
     if intention == 'predict':
         
         features = [shape_conf, skewness, kurt, ks_stat]       # Arrays of features to be ran through Random Forest model
         #results = clf.predict_proba([features])                 # Runs Random Forest model on features arrays
         y_pred = clf.predict([features])
+        end4 = timer()
+        #print(end4 - start4)
         return y_pred
     elif intention == 'calc':
         
@@ -179,5 +183,6 @@ def writer(label, burstsArr, intention):
             class_val = 1
         else:
             class_val = 0
-        
+        end4 = timer()
+        #print(end4 - start4)
         return shape_conf, skewness, kurt, ks_stat, reg_stat, class_val
