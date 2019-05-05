@@ -14,7 +14,7 @@ warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 from featureDef import featureFile
-from test import bandCand
+from bandSim import bandCand
 
 
 # Creates dataframe for file
