@@ -55,7 +55,6 @@ def bandCand():
         w = ((tempArr[k + 1]/tempArr[k])**(-1/factor))*tempWarr[k]
         tempWarr.append(w)
     
-    ratios = tempArr/np.amax(tempArr)
     tempArr = np.array(tempArr)
     tempWarr = np.array(tempWarr)
     
@@ -187,5 +186,3 @@ def bandCand():
             
         
     return finalDMarr, finalSNarr, finalWarr
-    
-
