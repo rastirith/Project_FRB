@@ -6,14 +6,15 @@ import math
 import random
 import pandas as pd
 import sys
-from scipy import stats
 from bisect import bisect_left
+from matplotlib import pyplot as plt
 
 
 warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 from featureDef import featureFile
+from test import bandCand
 
 
 # Creates dataframe for file
@@ -203,6 +204,11 @@ while counter < numBursts:
     SNratio = np.random.uniform(0.1,0.25)
     
     dmWidthTop = 0.2*dmMid
+    
+    candData = bandCand()
+    dmData = candData[0]
+    snArr = candData[1]
+    wArr = candData[2]
 
     Wms = 0
     while (Wms < 1):
@@ -221,55 +227,77 @@ while counter < numBursts:
     step = dmWidth/numPoints    # Size of each DM step when looping through the DM range
     count = 0                   # Countiong the number of events in the burst 
     
-    # Loops through here to generate all possible points for the burst
-    for i in range(numPoints + 1):
-        tempVar1 = random.uniform(0,1)      # Randomises a number to determine whether a point should be generated or not
-        if tempVar1 >= fraction:    # Does not generate a point
-            continue
-        else:                       # Does generate a point
-            count += 1
-            dmTemp = start + step*i     # DM for the point to be generated, relative to the DM centre of the burst
-            if dmTemp == 0:     # Sorts the dm = 0 issue for the zeta function
-                dmTemp = 0.00000001
-        
-            devSN = np.random.normal(0,stDevSN)   # Deviation from the theoretical SN value for the current point
-            devDM = np.random.normal(0,stDevDM)   # Deviation from the DM value for the current point
+    candType = 0
+    if candType == 0:
+        dmData += dmMid
+        for i in range(len(dmData)):
+            dmFinal = takeClosest(DM_poss, dmData[i])
+            dmArr.append(dmFinal)
             
-            #dmFinal = takeClosest(DM_poss, np.random.normal(dmMid + dmTemp, 1.44806))
-            dmFinal = takeClosest(DM_poss, dmMid + dmTemp + devDM)
-            dmArr.append(dmFinal)   # Adds the actual DM value of the point to an array that has been "pixelated" to match the p-band data
-
-            zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*(dmTemp + devDM)        # Zeta-function
-            snArr.append(math.pi**(1/2)*0.5*(zeta**-1)*math.erf(zeta)*(peakSN + devSN)) # SN value of the point, including deviation
+            timeVar = (timeMid + np.random.uniform(-timeRange,timeRange)/1000)
+            tArr.append(timeVar)
             
-            timeVar = (timeMid + np.random.uniform(-timeRange,timeRange)/1000)    # Time of detection of the points
-                
-            tArr.append(timeVar)    # Adds the time to the time array that has been "pixelated" to match the p-band data
-            wArr.append(32)
             labArr.append(1)
-        
-            if tempVar1 <= noiseFraction*fraction:  # Generates the the noise points
+            
+    elif candType == 1:
+    
+        # Loops through here to generate all possible points for the burst
+        for i in range(numPoints + 1):
+            
+            tempVar1 = random.uniform(0,1)      # Randomises a number to determine whether a point should be generated or not
+            if tempVar1 >= fraction:    # Does not generate a point
+                continue
+            else:                       # Does generate a point
                 count += 1
-                noiseDM = np.random.uniform((dmMid + start*1.1 - stDevDM*3), (dmMid + stDevDM*3 - start*1.1))
-                noiseSN = np.random.uniform(0, peakSN*0.8)
-                noiseTime = 0.000256*(round((timeMid + np.random.uniform(-timeRange,timeRange)/1000)/0.000256))
+                dmTemp = start + step*i     # DM for the point to be generated, relative to the DM centre of the burst
+                if dmTemp == 0:     # Sorts the dm = 0 issue for the zeta function
+                    dmTemp = 0.00000001
+            
+                devSN = np.random.normal(0,stDevSN)   # Deviation from the theoretical SN value for the current point
+                devDM = np.random.normal(0,stDevDM)   # Deviation from the DM value for the current point
+    
+                dmFinal = takeClosest(DM_poss, dmMid + dmTemp + devDM)
+                dmArr.append(dmFinal)   # Adds the actual DM value of the point to an array that has been "pixelated" to match the p-band data
+    
+                zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*(dmTemp + devDM)        # Zeta-function
+                snArr.append(math.pi**(1/2)*0.5*(zeta**-1)*math.erf(zeta)*(peakSN + devSN)) # SN value of the point, including deviation
                 
-                dmArr.append(takeClosest(DM_poss, noiseDM))
-                snArr.append(noiseSN)
-                tArr.append(noiseTime)
+                timeVar = (timeMid + np.random.uniform(-timeRange,timeRange)/1000)    # Time of detection of the points
+                    
+                tArr.append(timeVar)    # Adds the time to the time array that has been "pixelated" to match the p-band data
                 wArr.append(32)
-                labArr.append(0)
-                
+                labArr.append(1)
+            
+                if tempVar1 <= noiseFraction*fraction:  # Generates the the noise points
+                    count += 1
+                    noiseDM = np.random.uniform((dmMid + start*1.1 - stDevDM*3), (dmMid + stDevDM*3 - start*1.1))
+                    noiseSN = np.random.uniform(0, peakSN*0.8)
+                    noiseTime = 0.000256*(round((timeMid + np.random.uniform(-timeRange,timeRange)/1000)/0.000256))
+                    
+                    dmArr.append(takeClosest(DM_poss, noiseDM))
+                    snArr.append(noiseSN)
+                    tArr.append(noiseTime)
+                    wArr.append(32)
+                    labArr.append(0)
+                    
     tArr = timeGen(tArr, dmArr, snArr)
-                
         
     # Creates a numpy table of the burst, same format as the standard .dat files
-    totArr = np.zeros([count, 5])
+    totArr = np.zeros([len(dmArr), 5])
     totArr[:,0] = np.array(np.transpose(dmArr))
     totArr[:,1] = np.array(np.transpose(tArr))
     totArr[:,2] = np.array(np.transpose(snArr))
     totArr[:,3] = np.array(np.transpose(wArr))
     
+    fig1 = plt.figure()
+    ax1 = fig1.add_subplot(111)
+    ax1.scatter(totArr[:,1], totArr[:,0])
+    
+    fig2 = plt.figure()
+    ax2 = fig2.add_subplot(111)
+    ax2.scatter(totArr[:,0], totArr[:,2])
+    
+
     if intention == "c":
         totArr.reshape(-1)
         totArr[:,4] = np.array(np.transpose(labArr))
