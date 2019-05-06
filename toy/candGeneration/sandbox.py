@@ -35,3 +35,5 @@ for i in range(10):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.scatter(x, y, s = 4)"""
+    
+print(np.arange(0,5,1))
