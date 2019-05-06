@@ -377,7 +377,7 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
             tArr.append(round(timeVar,6))    # Adds the time to the time array that has been "pixelated" to match the p-band data
             wArr.append(32)
             labArr.append(0)
-        snArr = randFunc(np.linspace(start, dmWidth/2, numPoints + 1))
+        snArr = randFunc(np.linspace(0, dmWidth, numPoints + 1), stDevSN)
     else:
         # Loops through here to generate all possible points for the burst
         for i in range(numPoints + 1):
@@ -470,10 +470,10 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
     totArr[:,1] = np.array(np.transpose(tArr))
     totArr[:,2] = np.array(np.transpose(snArr))
     totArr[:,3] = np.array(np.transpose(wArr))
-    
+    """
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(111)
-    ax1.scatter(totArr[:,1], totArr[:,0])
+    ax1.scatter(totArr[:,1], totArr[:,0])"""
     
     fig2 = plt.figure()
     ax2 = fig2.add_subplot(111)
