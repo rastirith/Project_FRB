@@ -7,17 +7,17 @@ import numpy as np
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Activation, Flatten, Conv2D, MaxPooling2D
 from tensorflow.keras import backend as K
-from tensorflow.keras.callbacks import TensorBoard, EarlyStopping
+from tensorflow.keras.callbacks import TensorBoard, EarlyStopping , ModelCheckpoint
 import time
 import pickle
 
 #loading in training data
 
-pickle_in = open("generated_data_7\\X_scaled.pickle","rb")
+pickle_in = open("f_data_t\\X_scaled.pickle","rb")
 X = pickle.load(pickle_in)
 pickle_in.close()
 
-pickle_in = open("generated_data_7\\y2.pickle","rb")
+pickle_in = open("f_data_t\\y2.pickle","rb")
 
 y = pickle.load(pickle_in)
 pickle_in.close()
@@ -49,7 +49,9 @@ for dense_layer_size in dense_layer_sizes:
                 tensorboard = TensorBoard(log_dir=f"logs_100/{Name}")
                 
                 earlystop = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=0, mode='auto')
-
+                
+                modelcheckpoint = ModelCheckpoint(Name, monitor='val_loss', verbose=0, save_best_only=True, save_weights_only=False, mode='auto', period=1)
+                
                 model = Sequential()
                 
                 model.add(Conv2D(conv_layer_size, (3,3), input_shape = X.shape[1:]))
@@ -85,7 +87,7 @@ for dense_layer_size in dense_layer_sizes:
                               metrics=["accuracy"])
                 
 
-                model.fit(X, y, epochs=20, batch_size = 128, callbacks=[tensorboard, earlystop], validation_split=0.15) ##validate here for tensorboard callback or use callback param in evaluate
+                model.fit(X, y, epochs=8, batch_size = 128, callbacks=[tensorboard, earlystop], validation_split=0.15) ##validate here for tensorboard callback or use callback param in evaluate
 
                
     

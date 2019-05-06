@@ -289,14 +289,14 @@ while counter < numBursts:
     totArr[:,1] = np.array(np.transpose(tArr))
     totArr[:,2] = np.array(np.transpose(snArr))
     totArr[:,3] = np.array(np.transpose(wArr))
-    
+    """
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(111)
     ax1.scatter(totArr[:,1], totArr[:,0])
     
     fig2 = plt.figure()
     ax2 = fig2.add_subplot(111)
-    ax2.scatter(totArr[:,0], totArr[:,2])
+    ax2.scatter(totArr[:,0], totArr[:,2])"""
     
 
     if intention == "c":
@@ -345,7 +345,7 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
         numPoints = int(np.random.gumbel(0.015, 0.06)*2000) # Draws the number of points from this distribution
     
     
-    stDevSN = np.random.uniform(2,5)             # Standard deviation of the SN of the burst events
+    stDevSN = np.random.uniform(1,1)             # Standard deviation of the SN of the burst events
     stDevDM = dmWidth*np.random.uniform(0.1,0.4)   # Standard deviation of the DM of the burst events
     start = -dmWidth/2          # Lower end of the DM range of the burst, currently centered around 0
     step = dmWidth/numPoints    # Size of each DM step when looping through the DM range
@@ -364,7 +364,7 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
     
     funcVar = np.random.uniform(0,1)
     
-    if funcVar > 0:
+    if funcVar > 1/3:
         #dmArr = np.linspace(-dmWidth/2, dmWidth/2, numPoints + 1)
         for i in range(numPoints + 1):
             dmTemp = start + step*i
@@ -377,7 +377,7 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
             tArr.append(round(timeVar,6))    # Adds the time to the time array that has been "pixelated" to match the p-band data
             wArr.append(32)
             labArr.append(0)
-        snArr = randFunc(np.linspace(0, dmWidth, numPoints + 1), stDevSN)
+        snArr = randFunc(np.linspace(0.0001, dmWidth, numPoints + 1), stDevSN)
     else:
         # Loops through here to generate all possible points for the burst
         for i in range(numPoints + 1):
@@ -473,11 +473,11 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
     """
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(111)
-    ax1.scatter(totArr[:,1], totArr[:,0])"""
+    ax1.scatter(totArr[:,1], totArr[:,0])
     
     fig2 = plt.figure()
     ax2 = fig2.add_subplot(111)
-    ax2.scatter(totArr[:,0], totArr[:,2])
+    ax2.scatter(totArr[:,0], totArr[:,2])"""
     
     if intention == "c":
         totArr.reshape(-1)
