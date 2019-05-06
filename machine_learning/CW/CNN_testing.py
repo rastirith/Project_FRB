@@ -12,11 +12,11 @@ import time
 import pickle
 
 #loading in training data
-pickle_in = open("generated_data_5\\X_scaled.pickle","rb")
+pickle_in = open("generated_data_7\\X_scaled.pickle","rb")
 X = pickle.load(pickle_in)
 pickle_in.close()
 
-pickle_in = open("generated_data_5\\y2.pickle","rb")
+pickle_in = open("generated_data_7\\y2.pickle","rb")
 y = pickle.load(pickle_in)
 pickle_in.close()
 
@@ -24,8 +24,8 @@ pickle_in.close()
 
 #model variations
 dense_layers = [1]
-dense_layer_sizes = [256]
-conv_layer_sizes = [128]
+dense_layer_sizes = [128]
+conv_layer_sizes = [64]
 conv_layers = [3]
 
 print(len(X))
@@ -36,11 +36,11 @@ for dense_layer_size in dense_layer_sizes:
     for dense_layer in dense_layers:
         for conv_layer_size in conv_layer_sizes:
             for conv_layer in conv_layers:
-                Name = f"binary_dropout_40_modpool_{conv_layer}_conv_{conv_layer_size}_nodes_{dense_layer}_dense_{dense_layer_size}_nodes_{int(time.time())}"
+                Name = f"binary_dropout_40_{conv_layer}_conv_{conv_layer_size}_nodes_{dense_layer}_dense_{dense_layer_size}_nodes_{int(time.time())}"
                 print(Name)
                 #TensorBoard callback
                 
-                tensorboard = TensorBoard(log_dir=f"logs_40/{Name}")
+                tensorboard = TensorBoard(log_dir=f"logs_100/{Name}")
                 
                 earlystop = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=0, mode='auto')
                 
@@ -48,14 +48,13 @@ for dense_layer_size in dense_layer_sizes:
                 
                 model.add(Conv2D(conv_layer_size, (3,3), input_shape = X.shape[1:]))
                 model.add(Activation("relu"))
-                #model.add(MaxPooling2D(pool_size=(2,2)))
+                model.add(MaxPooling2D(pool_size=(2,2)))
                 model.add(Dropout(0.4))
                 
                 for l in range(conv_layer-1):
                     model.add(Conv2D(conv_layer_size, (3,3)))
                     model.add(Activation("relu"))
-                    if (l == conv_layer-1 ) or (l == 0):
-                        model.add(MaxPooling2D(pool_size=(2,2)))
+                    model.add(MaxPooling2D(pool_size=(2,2)))
                     model.add(Dropout(0.4))
                     
                 model.add(Flatten())
