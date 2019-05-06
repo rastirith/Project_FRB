@@ -6,9 +6,9 @@ import os
 import random
 import pickle
 
-DATADIR = os.getcwd() + "\matrix_files\\Playground3\\"
+DATADIR = os.getcwd() + "\matrix_files\\Playground11\\"
 
-arrLength = 5
+#arrLength = 5
 
 CATEGORIES=["Noise","Burst"]
 
@@ -20,8 +20,8 @@ def create_training_data():
         class_num = CATEGORIES.index(category)
         for matrix in os.listdir(path):
             
-            if len(matrix_data)==arrLength:
-                break
+            #if len(matrix_data)==arrLength:
+                #break
             try:
                 matrix_data.append(np.load(os.path.join(path,matrix)))
                 label_data.append(class_num)
@@ -40,7 +40,7 @@ data = create_training_data()
 X = data[0]
 y = data[1]
 
-X = X.reshape(-1, 70, 100, 1) #download more ram or batch it 
+X = X.reshape(-1, 100, 100, 1) #download more ram or batch it 
 X = X/np.amax(X)
 
 pickle_out = open("X_scaled.pickle","wb")
