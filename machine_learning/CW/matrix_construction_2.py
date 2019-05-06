@@ -45,7 +45,7 @@ def indexing(arr1, arr2):
 #Import data
 #array of file locations and chosing the file to inspect with path
 source_paths = []
-Folder = "training_6"
+Folder = "training_11"
 """
 #file number in source_paths to open
 x = 0
@@ -58,9 +58,9 @@ for file in glob.glob(os.getcwd() + f"\{Folder}\\*\\"+ "*.dat"):
     
 #make directory for matrix files to go to
 try:
-    os.mkdir(os.getcwd()+"\matrix_files\\Playground3\\")
-    os.mkdir(os.getcwd()+"\matrix_files\\Playground3\\Burst\\")
-    os.mkdir(os.getcwd()+"\matrix_files\\Playground3\\Noise\\")
+    os.mkdir(os.getcwd()+"\matrix_files\\Playground11\\")
+    os.mkdir(os.getcwd()+"\matrix_files\\Playground11\\Burst\\")
+    os.mkdir(os.getcwd()+"\matrix_files\\Playground11\\Noise\\")
    
 except:
     pass
@@ -100,10 +100,10 @@ timer_4 = [] #save
 timePerK = []
 pad7 = []
 
-y = 20000
+#y = 20000
 n_s = [] ###testing dm dimensions
-#for x in range(len(source_paths)):    
-for x in range(y):
+for x in range(len(source_paths)):    
+#for x in range(y):
 
     #reading in data files    
 
@@ -217,13 +217,14 @@ for x in range(y):
     ###need to downsample or pad DM dimensions or nothing if n=r_DMpixels
     #pixels wanted in dm axis
     start_3 = timer()
-    r_DMpixels = 70
+    r_DMpixels = 100
     
     #new matrix of required dimensions
-    zero3 = np.zeros((r_DMpixels,r_Tpixels))
+    
     #case of needing to pad
     
     if rows < r_DMpixels:
+        zero3 = np.zeros((r_DMpixels,r_Tpixels))
         start7 = timer()
         pad = (r_DMpixels-rows)/2
         pad = round(pad) #amount to pad from the top (~equal on the bottom)
@@ -236,10 +237,10 @@ for x in range(y):
     else:
         
         dmSplit = np.array_split(zero2[:,:], r_DMpixels, axis = 0)
-        temp = np.zeros((r_DMpixels,r_Tpixels))
+        zero3 = np.zeros((r_DMpixels,r_Tpixels))
         
         for k in range(len(dmSplit)):
-            temp[k] = (dmSplit[k].max(0))
+            zero3[k] = (dmSplit[k].max(0))
 
             
     end_3 = timer()
@@ -256,12 +257,12 @@ for x in range(y):
     n_s.append((len(zero3[:,:]),len(zero3[0,:]))) ###testing
     new_name = source_paths[x].split(f"{Folder}\\")[1].split("\\")[1].replace(".dat","_m_"+c_id)
     #np.savetxt(os.getcwd()+"\matrix_files\\Final\\"+new_name, zero3)
-    """
+    
     #temporary for playground
     if c_id == "0":
-        np.save(os.getcwd()+"\matrix_files\\Playground3\\Noise\\"+new_name, zero3)
+        np.save(os.getcwd()+"\matrix_files\\Playground11\\Noise\\"+new_name, zero3)
     else:
-        np.save(os.getcwd()+"\matrix_files\\Playground3\\Burst\\"+new_name, zero3)"""
+        np.save(os.getcwd()+"\matrix_files\\Playground11\\Burst\\"+new_name, zero3)
     
     end5 = timer()
     timePerK.append((end5 - start5)*1000)
