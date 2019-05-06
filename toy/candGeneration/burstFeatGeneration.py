@@ -345,7 +345,7 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
         numPoints = int(np.random.gumbel(0.015, 0.06)*2000) # Draws the number of points from this distribution
     
     
-    stDevSN = np.random.uniform(2,5)             # Standard deviation of the SN of the burst events
+    stDevSN = np.random.uniform(1,1)             # Standard deviation of the SN of the burst events
     stDevDM = dmWidth*np.random.uniform(0.1,0.4)   # Standard deviation of the DM of the burst events
     start = -dmWidth/2          # Lower end of the DM range of the burst, currently centered around 0
     step = dmWidth/numPoints    # Size of each DM step when looping through the DM range
@@ -364,7 +364,7 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
     
     funcVar = np.random.uniform(0,1)
     
-    if funcVar > 0:
+    if funcVar > 1/3:
         #dmArr = np.linspace(-dmWidth/2, dmWidth/2, numPoints + 1)
         for i in range(numPoints + 1):
             dmTemp = start + step*i

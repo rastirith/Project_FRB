@@ -1,6 +1,7 @@
 import numpy as np
 from matplotlib import pyplot as plt
 import math
+from scipy import special
 
 # Method to calculate and return the theoretical DM range span given a certain
 # time duration/width and peak magnitude
@@ -81,14 +82,11 @@ def bandCand():
         xTail = np.linspace(-cordAlt-5, cordAlt+5, 1*numDMpoints)
         zeta = (6.91*10**-3)*336*(1.732**-3)*(tWidth**-1)*xTail      # Zeta function in the cordes function
         zeta[zeta == 0] = 0.000001
-        
-        yTail = []
-        wTail = []
-        for i in range(len(zeta)):
-            yCord = (math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i])
-            yCord += np.random.normal(0, 0.02)
-            yTail.append(yCord)
-            wTail.append(np.random.normal(tempWarr[k], 0.01))
+            
+        yDeviations = np.random.normal(0,0.02, len(zeta))
+        yTail = (math.pi**(1/2))*0.5*(zeta**-1)*special.erf(zeta) + yDeviations
+        wTail = np.random.normal(tempWarr[k], 0.01, len(zeta))
+
     
         yTail = np.array(yTail)
         wTail = np.array(wTail)
@@ -112,18 +110,24 @@ def bandCand():
         for i in range(len(yTail)):
             randVar = np.random.uniform(0,1)
             if randVar > (i/(2.5*len(yTail))) + 0.2 - k*0.1:
-                num = int(np.random.uniform(0, 5))
+                num = np.random.randint(0, 5)
                 temp = np.random.uniform(tempArr[-1], yTail[i], num)
                 yTailVert = np.concatenate((yTailVert, temp))
                 xTailVert = np.concatenate((xTailVert, [xTail[i]]*num))
                 wTailVert = np.concatenate((wTailVert, np.random.normal(tempWarr[k], 0.01, num)))
         
+        """
+        iVals = np.arange(0, len(yTail), 1)
+        ifArr = (iVals/(2.5*len(yTail))) + 0.2 - k*0.1
+        randVars = np.random.uniform(0, 1, len(yTail))
+        trueInds = iVals[np.nonzero(randVars > ifArr)]
+        nums = np.random.randint(0, 5, len(trueInds))"""
+        
+        
         if len(yTailVert) > 0:
             xTailVert = xTailVert[np.nonzero(yTailVert > (tempArr[-1] - 2))]
             wTailVert = wTailVert[np.nonzero(yTailVert > (tempArr[-1] - 2))]
             yTailVert = yTailVert[yTailVert > (tempArr[-1] - 2)]
-            
-            
             
         finalSNarr = np.concatenate((finalSNarr, yTailVert, yTail, y))
         finalDMarr = np.concatenate((finalDMarr, xTailVert, xTail, x))
@@ -139,15 +143,9 @@ def bandCand():
         zeta = (6.91*10**-3)*336*(1.732**-3)*(tWidth**-1)*xTail      # Zeta function in the cordes function
         zeta[zeta == 0] = 0.000001
         
-        yTail = []
-        wTail = []
-        for i in range(len(zeta)):
-            yCord = (math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i])
-            yCord += np.random.normal(0, 0.02)
-            yTail.append(yCord)
-            wTail.append(np.random.normal(tempWarr[-1], 0.01))
-        yTail = np.array(yTail)
-        wTail = np.array(wTail)
+        yDeviations = np.random.normal(0,0.02, len(zeta))
+        yTail = (math.pi**(1/2))*0.5*(zeta**-1)*special.erf(zeta) + yDeviations
+        wTail = np.random.normal(tempWarr[-1], 0.01, len(zeta))
         
         capRatio = np.random.uniform(tempArr[-1]/tempArr[0] + 0.08, 0.24)
         
@@ -186,3 +184,5 @@ def bandCand():
             
         
     return finalDMarr, finalSNarr, finalWarr
+
+bandCand()
