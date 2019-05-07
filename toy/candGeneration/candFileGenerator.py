@@ -8,8 +8,10 @@ import random
 import pandas as pd
 import sys
 from bisect import bisect_left
+from scipy import special
 
-
+from bandSim import bandCand
+from randSignalFunc import randFunc
 
 # Creates dataframe for file
 def DF(path):
@@ -37,17 +39,11 @@ def cordes(Wms,SNratio):
 
     x = np.linspace(-1000,1000,10000)   # Generates x-values for the cordes function
     zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*x       # Zeta function in the cordes function
+    y = (math.pi**(1/2))*0.5*(zeta**-1)*special.erf(zeta)
     
-    #first = 0       # Variable indicating whether bottom or top of DM range has been found
-    bot_dm = 0      # Value of the lower end of the DM range
-    top_dm = 0      # Value of the upper end of the DM range
-    for i in range(len(x)): # Loops through the x-values and calculates the cordes value in each step
-        y = (math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i])
-        if (y >= SNratio): # First time the theoretical ratio goes above the actual ratio go in here
-            bot_dm = x[i]                   # This x-value corresponds to the bottom DM value
-            top_dm = x[10000 - i]
-            break
-    dm_range = top_dm - bot_dm              # Theoretical allowed DM range for the current candidate
+    dm = x[np.nonzero(y > SNratio)]
+    dm_range = dm[-1] - dm[0]      # Theoretical allowed DM range for the current candidate
+    
     return dm_range
 
 # Finds the closest value to a myNumber in sorted myList 
@@ -171,7 +167,8 @@ while counter < numBursts:
         #progressBar(counter, numBursts)
         counter += 1
         
-        upperTime = max(data[:,1])
+        upperTime = np.amax(data[:,1])
+        upperDM = np.amax(data[:,0])
         
         snArr = []              # All SN values of a burst
         dmArr = []              # All DM value of a burst
@@ -179,7 +176,7 @@ while counter < numBursts:
         wArr = []
         labArr = []
         timeMid = np.random.uniform(1,upperTime)                # Average time of detection for a burst
-        dmMid = np.random.uniform(dmRangeBot, max(data[:,0]))       # Average DM of the burst
+        dmMid = np.random.uniform(dmRangeBot, upperDM)       # Average DM of the burst
         peakSN = np.random.uniform(snRangeBot, snRangeTop)      # Peak SN of the burst
         SNratio = np.random.uniform(0.05,0.25)
         
@@ -205,43 +202,62 @@ while counter < numBursts:
         step = dmWidth/numPoints    # Size of each DM step when looping through the DM range
         count = 0                   # Countiong the number of events in the burst 
         
-        # Loops through here to generate all possible points for the burst
-        for i in range(numPoints + 1):
-            tempVar1 = random.uniform(0,1)      # Randomises a number to determine whether a point should be generated or not
-            if tempVar1 >= fraction:    # Does not generate a point
-                continue
-            else:                       # Does generate a point
-                count += 1
-                dmTemp = start + step*i     # DM for the point to be generated, relative to the DM centre of the burst
-                if dmTemp == 0:     # Sorts the dm = 0 issue for the zeta function
-                    dmTemp = 0.00000001
+        candType = 0
+        if candType == 0:
+            candData = bandCand()
+            dmData = candData[0]
+            snArr = candData[1]
+            wArr = candData[2]
             
-                devSN = np.random.normal(0,stDevSN)   # Deviation from the theoretical SN value for the current point
-                devDM = np.random.normal(0,stDevDM)   # Deviation from the DM value for the current point
+            dmData += dmMid
+            for i in range(len(dmData)):
+                dmFinal = takeClosest(DM_poss, dmData[i])
+                dmArr.append(dmFinal)
                 
-                dmFinal = takeClosest(DM_poss, dmMid + dmTemp + devDM)
-                dmArr.append(dmFinal)    # Adds the actual DM value of the point to an array
-
-                zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*(dmTemp + devDM)        # Zeta-function
-                snArr.append(math.pi**(1/2)*0.5*(zeta**-1)*math.erf(zeta)*(peakSN + devSN)) # SN value of the point, including deviation
-                
-                timeVar = (timeMid + np.random.uniform(-timeRange,timeRange)/1000)    # Time of detection of the points
-                
+                timeVar = (timeMid + np.random.uniform(-timeRange,timeRange)/1000)
                 tArr.append(timeVar)
-                wArr.append(32)
+                
                 labArr.append(1)
+                
+        elif candType == 1:
             
-                if tempVar1 <= noiseFraction*fraction:  # Generates the the noise points
+            # Loops through here to generate all possible points for the burst
+            for i in range(numPoints + 1):
+                tempVar1 = random.uniform(0,1)      # Randomises a number to determine whether a point should be generated or not
+                if tempVar1 >= fraction:    # Does not generate a point
+                    continue
+                else:                       # Does generate a point
                     count += 1
-                    noiseDM = np.random.uniform((dmMid + start*1.1 - stDevDM*3), (dmMid + stDevDM*3 - start*1.1))
-                    noiseSN = np.random.uniform(0, peakSN*0.8)
-                    noiseTime = 0.000256*(round((timeMid + np.random.uniform(-timeRange,timeRange)/1000)/0.000256))
+                    dmTemp = start + step*i     # DM for the point to be generated, relative to the DM centre of the burst
+                    if dmTemp == 0:     # Sorts the dm = 0 issue for the zeta function
+                        dmTemp = 0.00000001
+                
+                    devSN = np.random.normal(0,stDevSN)   # Deviation from the theoretical SN value for the current point
+                    devDM = np.random.normal(0,stDevDM)   # Deviation from the DM value for the current point
                     
-                    dmArr.append(takeClosest(DM_poss, noiseDM))
-                    snArr.append(noiseSN)
-                    tArr.append(noiseTime)
+                    dmFinal = takeClosest(DM_poss, dmMid + dmTemp + devDM)
+                    dmArr.append(dmFinal)    # Adds the actual DM value of the point to an array
+    
+                    zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*(dmTemp + devDM)        # Zeta-function
+                    snArr.append(math.pi**(1/2)*0.5*(zeta**-1)*math.erf(zeta)*(peakSN + devSN)) # SN value of the point, including deviation
+                    
+                    timeVar = (timeMid + np.random.uniform(-timeRange,timeRange)/1000)    # Time of detection of the points
+                    
+                    tArr.append(timeVar)
                     wArr.append(32)
-                    labArr.append(0)
+                    labArr.append(1)
+                
+                    if tempVar1 <= noiseFraction*fraction:  # Generates the the noise points
+                        count += 1
+                        noiseDM = np.random.uniform((dmMid + start*1.1 - stDevDM*3), (dmMid + stDevDM*3 - start*1.1))
+                        noiseSN = np.random.uniform(0, peakSN*0.8)
+                        noiseTime = 0.000256*(round((timeMid + np.random.uniform(-timeRange,timeRange)/1000)/0.000256))
+                        
+                        dmArr.append(takeClosest(DM_poss, noiseDM))
+                        snArr.append(noiseSN)
+                        tArr.append(noiseTime)
+                        wArr.append(32)
+                        labArr.append(0)
 
         tArr = timeGen(tArr, dmArr, snArr)
         
@@ -253,7 +269,7 @@ while counter < numBursts:
         print("\n")"""
             
         # Creates a numpy table of the burst, same format as the standard .dat files
-        totArr = np.zeros([count, 5])
+        totArr = np.zeros([len(dmArr), 5])
         totArr[:,0] = np.array(np.transpose(dmArr))
         totArr[:,1] = np.array(np.transpose(tArr))
         totArr[:,2] = np.array(np.transpose(snArr))
@@ -299,7 +315,8 @@ while (counter < numBursts) and (intention == "t"):
     else:
         """-------------------------------------------------------------------------"""
         
-        upperTime = max(data[:,1])
+        upperTime = np.amax(data[:,1])
+        upperDM = np.amax(data[:,0])
         
         snArr = []              # All SN values of a burst
         dmArr = []              # All DM value of a burst
@@ -344,89 +361,107 @@ while (counter < numBursts) and (intention == "t"):
         pointNum = 0
         horLinOrd = np.random.uniform(0,1)
         
-        # Loops through here to generate all possible points for the burst
-        for i in range(numPoints + 1):
-            tempVar1 = random.uniform(0,1)      # Randomises a number to determine whether a point should be generated or not
-            if tempVar1 >= fraction:    # Does not generate a point
-                continue
-            else:                       # Does generate a point
-                count += 1
-                dmTemp = start + step*i     # DM for the point to be generated, relative to the DM centre of the burst
-                if dmTemp == 0:     # Sorts the dm = 0 issue for the zeta function
-                    dmTemp = 0.00000001
-            
+        funcVar = np.random.uniform(0,1)
+    
+        if funcVar > 1/3:
+            #dmArr = np.linspace(-dmWidth/2, dmWidth/2, numPoints + 1)
+            for i in range(numPoints + 1):
+                dmTemp = start + step*i
+                
                 devSN = np.random.normal(0,stDevSN)   # Deviation from the theoretical SN value for the current point
                 devDM = np.random.normal(0,stDevDM)   # Deviation from the DM value for the current point
-    
-                if typeVar >= 0.75:     # Linear SN shape
-                    if side >= 0.5:
-                        c = ((peakSN + botSN) - ((peakSN - botSN)/(dmWidth))*(2*dmMid))/2
-                        k = (peakSN - botSN)/(dmWidth)
-                        y = (dmMid + dmTemp)*k + c
-                        snArr.append(y) # SN value of the point, including deviation
-                    else:
-                        c = (botSN + peakSN - ((botSN - peakSN)/(dmWidth))*(2*dmMid))/2
-                        k = (botSN - peakSN)/(dmWidth)
-                        y = (dmMid + dmTemp)*k + c
-                        snArr.append(y) # SN value of the point, including deviation
-                    dmArr.append(takeClosest(DM_poss, dmMid + dmTemp + devDM))
-                        
-                elif typeVar >= 0.5:    # Horizontal SN shape
-                    devSN = np.random.normal(0,horStDevSN)  # Using own StDev since these tend to be narrower than normal signals
-                    y = horSN + devSN
-                    snArr.append(y)
-                    
-                elif typeVar >= 0.25:   # Random uniform SN distribution
-                    y = horSN + devSN
-                    snArr.append(y)
-                    
-                else:
-                    pointNum += 1
-                    if horLinOrd >= 0.5:
-                        if pointNum >= numPoints/2:
-                            altWidth = dmWidth/2
-                            devDM = np.random.normal(0,4)
-                            if side >= 0.5:
-                                c = (horSN + horBotSN - ((horSN - horBotSN)/(altWidth))*(2*(dmMid + altWidth)))/2
-                                k = (horSN - horBotSN)/(altWidth)
-                                y1 = ((dmMid + altWidth) + dmTemp)*k + c
-                                snArr.append(y1) # SN value of the point, including deviation
-                            else:
-                                c = (horBotSN + horSN - ((horBotSN - horSN)/(altWidth))*(2*(dmMid + altWidth)))/2
-                                k = (horBotSN - horSN)/(altWidth)
-                                y1 = ((dmMid + altWidth) + dmTemp)*k + c
-                                snArr.append(y1) # SN value of the point, including deviation
-                        else:
-                            devSN2 = np.random.normal(0,horStDevSN)  # Using own StDev since these tend to be narrower than normal signals
-                            y2 = horSN + devSN2
-                            snArr.append(y2)
-                    else:
-                        if pointNum <= numPoints/2:
-                            altWidth = dmWidth/2
-                            devDM = np.random.normal(0,4)
-                            if side >= 0.5:
-                                c = (horSN + horBotSN - ((horSN - horBotSN)/(altWidth))*(2*(dmMid + altWidth)))/2
-                                k = (horSN - horBotSN)/(altWidth)
-                                y1 = ((dmMid + altWidth) + dmTemp)*k + c
-                                snArr.append(y1) # SN value of the point, including deviation
-                            else:
-                                c = (horBotSN + horSN - ((horBotSN - horSN)/(altWidth))*(2*(dmMid + altWidth)))/2
-                                k = (horBotSN - horSN)/(altWidth)
-                                y1 = ((dmMid + altWidth) + dmTemp)*k + c
-                                snArr.append(y1) # SN value of the point, including deviation
-                        else:
-                            devSN2 = np.random.normal(0,horStDevSN)  # Using own StDev since these tend to be narrower than normal signals
-                            y2 = horSN + devSN2
-                            snArr.append(y2)
-                    dmArr.append(takeClosest(DM_poss, dmMid + dmTemp + devDM))
-                        
+                
+                dmArr.append(takeClosest(DM_poss, dmMid + dmTemp + devDM))
                 timeVar = 0.000256*round((timeMid + np.random.uniform(-timeRange,timeRange)/1000)/0.000256)     # Time of detection of the points
                 tArr.append(round(timeVar,6))    # Adds the time to the time array that has been "pixelated" to match the p-band data
                 wArr.append(32)
                 labArr.append(0)
+            snArr = randFunc(np.linspace(0.0001, dmWidth, numPoints + 1), stDevSN)
+        else:
+            
+            # Loops through here to generate all possible points for the burst
+            for i in range(numPoints + 1):
+                tempVar1 = random.uniform(0,1)      # Randomises a number to determine whether a point should be generated or not
+                if tempVar1 >= fraction:    # Does not generate a point
+                    continue
+                else:                       # Does generate a point
+                    count += 1
+                    dmTemp = start + step*i     # DM for the point to be generated, relative to the DM centre of the burst
+                    if dmTemp == 0:     # Sorts the dm = 0 issue for the zeta function
+                        dmTemp = 0.00000001
+                
+                    devSN = np.random.normal(0,stDevSN)   # Deviation from the theoretical SN value for the current point
+                    devDM = np.random.normal(0,stDevDM)   # Deviation from the DM value for the current point
+        
+                    if typeVar >= 0.75:     # Linear SN shape
+                        if side >= 0.5:
+                            c = ((peakSN + botSN) - ((peakSN - botSN)/(dmWidth))*(2*dmMid))/2
+                            k = (peakSN - botSN)/(dmWidth)
+                            y = (dmMid + dmTemp)*k + c
+                            snArr.append(y) # SN value of the point, including deviation
+                        else:
+                            c = (botSN + peakSN - ((botSN - peakSN)/(dmWidth))*(2*dmMid))/2
+                            k = (botSN - peakSN)/(dmWidth)
+                            y = (dmMid + dmTemp)*k + c
+                            snArr.append(y) # SN value of the point, including deviation
+                        dmArr.append(takeClosest(DM_poss, dmMid + dmTemp + devDM))
+                            
+                    elif typeVar >= 0.5:    # Horizontal SN shape
+                        devSN = np.random.normal(0,horStDevSN)  # Using own StDev since these tend to be narrower than normal signals
+                        y = horSN + devSN
+                        snArr.append(y)
+                        
+                    elif typeVar >= 0.25:   # Random uniform SN distribution
+                        y = horSN + devSN
+                        snArr.append(y)
+                        
+                    else:
+                        pointNum += 1
+                        if horLinOrd >= 0.5:
+                            if pointNum >= numPoints/2:
+                                altWidth = dmWidth/2
+                                devDM = np.random.normal(0,4)
+                                if side >= 0.5:
+                                    c = (horSN + horBotSN - ((horSN - horBotSN)/(altWidth))*(2*(dmMid + altWidth)))/2
+                                    k = (horSN - horBotSN)/(altWidth)
+                                    y1 = ((dmMid + altWidth) + dmTemp)*k + c
+                                    snArr.append(y1) # SN value of the point, including deviation
+                                else:
+                                    c = (horBotSN + horSN - ((horBotSN - horSN)/(altWidth))*(2*(dmMid + altWidth)))/2
+                                    k = (horBotSN - horSN)/(altWidth)
+                                    y1 = ((dmMid + altWidth) + dmTemp)*k + c
+                                    snArr.append(y1) # SN value of the point, including deviation
+                            else:
+                                devSN2 = np.random.normal(0,horStDevSN)  # Using own StDev since these tend to be narrower than normal signals
+                                y2 = horSN + devSN2
+                                snArr.append(y2)
+                        else:
+                            if pointNum <= numPoints/2:
+                                altWidth = dmWidth/2
+                                devDM = np.random.normal(0,4)
+                                if side >= 0.5:
+                                    c = (horSN + horBotSN - ((horSN - horBotSN)/(altWidth))*(2*(dmMid + altWidth)))/2
+                                    k = (horSN - horBotSN)/(altWidth)
+                                    y1 = ((dmMid + altWidth) + dmTemp)*k + c
+                                    snArr.append(y1) # SN value of the point, including deviation
+                                else:
+                                    c = (horBotSN + horSN - ((horBotSN - horSN)/(altWidth))*(2*(dmMid + altWidth)))/2
+                                    k = (horBotSN - horSN)/(altWidth)
+                                    y1 = ((dmMid + altWidth) + dmTemp)*k + c
+                                    snArr.append(y1) # SN value of the point, including deviation
+                            else:
+                                devSN2 = np.random.normal(0,horStDevSN)  # Using own StDev since these tend to be narrower than normal signals
+                                y2 = horSN + devSN2
+                                snArr.append(y2)
+                        dmArr.append(takeClosest(DM_poss, dmMid + dmTemp + devDM))
+                            
+                    timeVar = 0.000256*round((timeMid + np.random.uniform(-timeRange,timeRange)/1000)/0.000256)     # Time of detection of the points
+                    tArr.append(round(timeVar,6))    # Adds the time to the time array that has been "pixelated" to match the p-band data
+                    wArr.append(32)
+                    labArr.append(0)
         
         # Creates a numpy table of the burst, same format as the standard .dat files
-        totArr = np.zeros([count, 5])
+        totArr = np.zeros([len(dmArr), 5])
         totArr[:,0] = np.array(np.transpose(dmArr))
         totArr[:,1] = np.array(np.transpose(tArr))
         totArr[:,2] = np.array(np.transpose(snArr))
