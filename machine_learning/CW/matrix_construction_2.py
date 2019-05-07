@@ -45,7 +45,7 @@ def indexing(arr1, arr2):
 #Import data
 #array of file locations and chosing the file to inspect with path
 source_paths = []
-Folder = "test_train"
+Folder = "valid_data"
 """
 #file number in source_paths to open
 x = 0
@@ -58,9 +58,9 @@ for file in glob.glob(os.getcwd() + f"\{Folder}\\*\\"+ "*.dat"):
     
 #make directory for matrix files to go to
 try:
-    os.mkdir(os.getcwd()+"\matrix_files\\f_test\\")
-    os.mkdir(os.getcwd()+"\matrix_files\\f_test\\Burst\\")
-    os.mkdir(os.getcwd()+"\matrix_files\\f_test\\Noise\\")
+    os.mkdir(os.getcwd()+"\matrix_files\\val_test\\")
+    os.mkdir(os.getcwd()+"\matrix_files\\val_test\\Burst\\")
+    os.mkdir(os.getcwd()+"\matrix_files\\val_test\\Noise\\")
    
 except:
     pass
@@ -260,9 +260,9 @@ for x in range(len(source_paths)):
     
     #temporary for playground
     if c_id == "0":
-        np.save(os.getcwd()+"\matrix_files\\f_test\\Noise\\"+new_name, zero3)
+        np.save(os.getcwd()+"\matrix_files\\val_test\\Noise\\"+new_name, zero3)
     else:
-        np.save(os.getcwd()+"\matrix_files\\f_test\\Burst\\"+new_name, zero3)
+        np.save(os.getcwd()+"\matrix_files\\val_test\\Burst\\"+new_name, zero3)
     
     end5 = timer()
     timePerK.append((end5 - start5)*1000)

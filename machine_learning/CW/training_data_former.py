@@ -6,7 +6,7 @@ import os
 import random
 import pickle
 
-DATADIR = os.getcwd() + "\matrix_files\\Playground11\\"
+DATADIR = os.getcwd() + "\matrix_files\\val_test\\"
 
 #arrLength = 5
 
