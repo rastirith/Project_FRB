@@ -4,6 +4,7 @@ from scipy import stats
 import math
 import pickle
 from timeit import default_timer as timer
+from scipy import special
 
 clf = pickle.load(open("model.sav",'rb'))   # Loads the saved Random Forest model
 
@@ -61,20 +62,11 @@ def cordes(timeArr,peakSN):
     
     x = np.linspace(-1000,1000,10000)   # Generates x-values for the cordes function
     zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*x       # Zeta function in the cordes function
+    y = (math.pi**(1/2))*0.5*(zeta**-1)*special.erf(zeta)
     
-    first = 0       # Variable indicating whether bottom or top of DM range has been found
-    bot_dm = 0      # Value of the lower end of the DM range
-    top_dm = 0      # Value of the upper end of the DM range
-    for i in range(len(x)): # Loops through the x-values and calculates the cordes value in each step
-        y = (math.pi**(1/2))*0.5*(zeta[i]**-1)*math.erf(zeta[i])
-        cordes.append(y)
-        if (y >= SNratio) and (first == 0): # First time the theoretical ratio goes above the actual ratio go in here
-            bot_dm = x[i]                   # This x-value corresponds to the bottom DM value
-            first = 1                       # Changes variable value to not go into this statement again
-        if (y <= SNratio) and (first == 1): # First time the theoretical ratio goes below the actual ratio after bottom is found
-            top_dm = x[i]                   # This x-value corresponds to the top DM value
-            break                           # Values have been found, break out of loop
-    dm_range = top_dm - bot_dm              # Theoretical allowed DM range for the current candidate
+    dm = x[np.nonzero(y > SNratio)]
+    dm_range = dm[-1] - dm[0]      # Theoretical allowed DM range for the current candidate
+    
     return dm_range
 
 
