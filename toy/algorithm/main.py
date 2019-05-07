@@ -10,7 +10,7 @@ from timeit import default_timer as timer
 
 warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
-np.set_printoptions(suppress=True)
+np.set_printoptions(suppress=True, linewidth = 150)
 
 def progressBar(value, endvalue, bar_length=20):
     
@@ -35,7 +35,7 @@ timer4 = []
 for i in range(len(source_paths)): 
     
     start1 = timer()
-    progressBar(i,len(source_paths))
+    #progressBar(i,len(source_paths))
     path_index = i      # Current path index in the source_paths array
     file = source_paths[path_index]     # Setting which file to open
     
@@ -44,6 +44,14 @@ for i in range(len(source_paths)):
     newArr = clusterData[0]
     labels = clusterData[1]
     end1 = timer()
+    
+    """
+    test = newArr[newArr[:,5] == 2]
+    
+    print(labels)
+    print(newArr)
+    print(test)"""
+    
     timer1.append(end1 - start1)
     
     start2 = timer()
@@ -51,9 +59,21 @@ for i in range(len(source_paths)):
     for q in range(1,len(labels)):
         start3 = timer()
         label = labels[q]
+        cand = newArr[newArr[:,5] == labels[q]]
+        
+        print(cand)
+        
         result = writer(label, newArr, 'predict')
+        # CNN SCRIPT GOES HERE
+        
         end3 = timer()
         timer3.append(end3 - start3)
+        
+        
+    break
+
+
+
     end2 = timer()
     timer2.append(end2 - start2)
 
