@@ -67,11 +67,11 @@ except:
 
 #import dedispersion plan
 df_ddp = pd.read_csv("dd_plan.txt")
-"""print(df_ddp)"""
+"""print(df_ddp)
 #setup array for step limits
 dd_DM = np.array(df_ddp["DM_stop"])
 dd_step = np.array(df_ddp["DM_step"])
-
+"""
 
 #Constructing DF of possible DM values from ddp
 DM_start = df_ddp["DM_start"]

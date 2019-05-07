@@ -13,11 +13,11 @@ import pickle
 
 #loading in training data
 
-pickle_in = open("f_data_t\\X_scaled.pickle","rb")
+pickle_in = open("norm_test\\X_scaled.pickle","rb")
 X = pickle.load(pickle_in)
 pickle_in.close()
 
-pickle_in = open("f_data_t\\y2.pickle","rb")
+pickle_in = open("norm_test\\y2.pickle","rb")
 
 y = pickle.load(pickle_in)
 pickle_in.close()

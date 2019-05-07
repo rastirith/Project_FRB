@@ -6,7 +6,7 @@ import os
 import random
 import pickle
 
-DATADIR = os.getcwd() + "\matrix_files\\val_test\\"
+DATADIR = os.getcwd() + "\matrix_files\\f_test\\"
 
 #arrLength = 5
 
@@ -20,14 +20,15 @@ def create_training_data():
         class_num = CATEGORIES.index(category)
         for matrix in os.listdir(path):
             
-            #if len(matrix_data)==arrLength:
+            #if len(matrix_data)==2:
                 #break
             try:
                 matrix_data.append(np.load(os.path.join(path,matrix)))
                 label_data.append(class_num)
             except:
                 pass   
-    
+            matrix_data[-1] /= np.amax(matrix_data[-1])
+            
     random.seed(6)
     random.shuffle(matrix_data)
     random.seed(6)
@@ -40,8 +41,12 @@ data = create_training_data()
 X = data[0]
 y = data[1]
 
-X = X.reshape(-1, 100, 100, 1) #download more ram or batch it 
-X = X/np.amax(X)
+
+X = X.reshape(-1, 100, 100, 1)
+
+#download more ram or batch it 
+#X = X/np.amax(X)
+#print(np.unique(X[0]))
 
 pickle_out = open("X_scaled.pickle","wb")
 pickle.dump(X,pickle_out)
