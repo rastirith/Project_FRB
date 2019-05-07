@@ -13,11 +13,11 @@ import pickle
 
 #loading in training data
 
-pickle_in = open("f_data_t\\X_scaled.pickle","rb")
+pickle_in = open("norm_test\\X_scaled.pickle","rb")
 X = pickle.load(pickle_in)
 pickle_in.close()
 
-pickle_in = open("f_data_t\\y2.pickle","rb")
+pickle_in = open("norm_test\\y2.pickle","rb")
 
 y = pickle.load(pickle_in)
 pickle_in.close()
@@ -87,7 +87,7 @@ for dense_layer_size in dense_layer_sizes:
                               metrics=["accuracy"])
                 
 
-                model.fit(X, y, epochs=8, batch_size = 128, callbacks=[tensorboard, earlystop], validation_split=0.15) ##validate here for tensorboard callback or use callback param in evaluate
+                model.fit(X, y, epochs=8, batch_size = 128, callbacks=[tensorboard, earlystop, modelcheckpoint], validation_split=0.15) ##validate here for tensorboard callback or use callback param in evaluate
 
                
     
