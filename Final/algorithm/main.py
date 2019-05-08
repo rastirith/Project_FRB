@@ -3,7 +3,7 @@ import matplotlib as mpl
 from matplotlib import pyplot as plt
 import glob, os, sys
 import warnings
-
+import pickle
 
 from clustering import cluster
 from matrix import matrix_form
@@ -26,13 +26,22 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 np.set_printoptions(suppress=True, linewidth = 150)
 
 #Strings to be set dependant on data usage
-
 ddplan = "\\utils\\dd_plan.txt" #Dedispersion Plan Filepath
-modelName = "\\utils\\binary_dropout_40_3_conv_64_nodes_1_dense_128_nodes_1557142941"#CNN normalisation(original) saved model Filepath
+#modelName = "\\utils\\binary_dropout_40_3_conv_64_nodes_1_dense_128_nodes_1557142941"#CNN normalisation(original) saved model Filepath
 #modelName = "\\utils\\binary_dropout_40_3_conv_64_nodes_1_dense_128_nodes_1557235933"#CNN normalisation per file
+#modelName = "\\utils\\binary_dropout_40_3_conv_64_nodes_1_dense_128_nodes_1557316602" #CNN Z-score norm
+#modelName = "\\utils\\binary_dropout_40_3_conv_64_nodes_1_dense_128_nodes_1557317452" #osk meandiv CNN
+#modelName = "\\utils\\binary_dropout_40_3_conv_64_nodes_1_dense_128_nodes_1557322428" #no norm
+#modelName = "\\utils\\binary_dropout_40_3_conv_64_nodes_1_dense_128_nodes_1557322926" #full z-score (withzero)
+modelName = "\\utils\\binary_dropout_40_3_conv_64_nodes_1_dense_128_nodes_1557343773" # new noise with norm
 
 #Loading the CNN classifier model
 classifier = load_model(os.getcwd() + modelName)
+
+#Scaling parameters for the data to be parsed by the CNN
+pickle_in = open("utils\\scale_param.pickle","rb")
+scaling = pickle.load(pickle_in)
+pickle_in.close()
 
 #Forming array of the data filepaths
 source_paths = []   # Array of file paths to be reviewed
@@ -79,8 +88,9 @@ for i in range(len(source_paths)):
         
         #formatting the candidate data so parsable by CNN
         matrix = matrix_form(cand,ddplan)
-        matrix = matrix.reshape(-1,100,100,1)/np.amax(matrix)
+        matrix = matrix.reshape(-1,100,100,1) #/0.71 #this mean value
         
+        matrix = (matrix - scaling[0])/scaling[1]
         #predicting with the CNN
         prediction = classifier.predict_classes(matrix)
         
