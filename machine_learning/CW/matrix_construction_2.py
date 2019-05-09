@@ -6,7 +6,6 @@ import sys
 from timeit import default_timer as timer
 from matplotlib import pyplot as plt
 
-
 np.set_printoptions(linewidth = 100)
 
 ###NEED TO HANDLE SEPERATE CLUSTERS SO ADD COLUMN TO DATA FILES WITH LABEL
@@ -50,20 +49,39 @@ Folder = "valid_data"
 #file number in source_paths to open
 x = 0
 """
+"""
+import_name = input("Name of folder to import from: ")
+while import_name == "":
+    import_name = input("Please enter the name of the folder to import from: ")
+exists = os.path.exists(os.getcwd() + '\\matrix_files\\' + import_name)
+while exists == False:
+    print("Folder does not exist, try again.")
+    import_name = input("Name of folder to import from: ")
+    print(os.getcwd() + '\\matrix_files\\' + import_name)
+    exists = os.path.exists(os.getcwd() + '\\matrix_files\\' + import_name)"""
+#os.path.exists(path_in_here) 
 
 #filling source_paths from the idir
 for file in glob.glob(os.getcwd() + f"\{Folder}\\*\\"+ "*.dat"):
-    
+    #print(file)
     source_paths.append(file)
+
+folderName = input("Name of folder to be created: ")
+while folderName == "":
+    folderName = input("Please enter a name for the folder to be created: ")
+while True:
+    print(os.getcwd() + '\\matrix_files\\' + folderName)
+    try:    # Only creates folders if they don't already exist
+        os.mkdir(os.getcwd() + '\\matrix_files\\' + folderName)
+        break
+    except:
+        print("A folder with this name already exists. Please enter a different name.")
+        folderName = input("Name of folder to be created: ")
     
-#make directory for matrix files to go to
-try:
-    os.mkdir(os.getcwd()+"\matrix_files\\val_test\\")
-    os.mkdir(os.getcwd()+"\matrix_files\\val_test\\Burst\\")
-    os.mkdir(os.getcwd()+"\matrix_files\\val_test\\Noise\\")
-   
-except:
-    pass
+# Make directory for matrix files to go to
+os.mkdir(os.getcwd()+"\\matrix_files\\" + folderName + "\\Burst\\")
+os.mkdir(os.getcwd()+"\\matrix_files\\" + folderName + "\\Noise\\")
+
 
 #import dedispersion plan
 df_ddp = pd.read_csv("dd_plan.txt")
@@ -102,8 +120,9 @@ pad7 = []
 
 #y = 20000
 n_s = [] ###testing dm dimensions
-for x in range(len(source_paths)):    
-#for x in range(y):
+for x in range(len(source_paths)):
+    break    
+    #for x in range(y):
 
     #reading in data files    
 

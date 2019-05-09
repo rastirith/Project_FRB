@@ -9,25 +9,36 @@ from matplotlib import pyplot as plt
 
 np.set_printoptions(linewidth = 100)
 
-###NEED TO HANDLE SEPERATE CLUSTERS SO ADD COLUMN TO DATA FILES WITH LABEL
-###see sourcepaths[16]&8
 def progressBar(value, endvalue, bar_length=20):
+    """Displays and updates a progress bar in the console window.
+
+    Keyword arguments:
+    value -- current iteration value
+    endvalue -- value at which the iterations end
+    bar_length -- length of progress bar in console window
+    """
     
-    percent = float(value) / endvalue
-    arrow = '-' * int(round(percent * bar_length) - 1) + '>'
+    percent = float(value) / endvalue       # Calculates progress percentage
+    arrow = '-' * int(round(percent * bar_length) - 1) + '>'    # Draws arrow displayed
     spaces = ' ' * (bar_length - len(arrow))
     
+    # Writes/updates progress bar
     sys.stdout.write("\rPercent: [{0}] {1}%".format(arrow + spaces, int(round(percent * 100))))
 
-
-# Creates dataframe for file
 def DF(path):
-    axislabels = ["DM", "Time", "S/N", "Width","Label"]
-    Tfile = open(path,'r')
-    data = np.fromfile(Tfile,np.float32,-1) 
-    c = data.reshape((-1,5))
-    df = pd.DataFrame(c,columns=axislabels)
+    """Opens binary encoded file, reshapes it into columns and returns a pandas datafram.
+
+    Keyword arguments:
+    path -- the path to the file to be opened
+    """
+    axislabels = ["DM", "Time", "S/N", "Width","Label"]     # Labels of data types contained in file
+    
+    Tfile = open(path,'r')  
+    data = np.fromfile(Tfile,np.float32,-1)         # Decodes data to float32 objects
+    c = data.reshape((-1,5))                        # Reshapes the string of numbers into columns
+    df = pd.DataFrame(c,columns=axislabels)         # Creates dataframe
     Tfile.close()
+    
     return df
 
 def indexing(arr1, arr2):

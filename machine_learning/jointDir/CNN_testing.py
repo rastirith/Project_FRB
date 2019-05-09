@@ -27,7 +27,7 @@ def import_prompt():
 
 input_folder = import_prompt()
 
-pickle_in = open(input_folder + "\\X_scaled.pickle","rb")
+pickle_in = open(input_folder + "\\Xavg.pickle","rb")
 X = pickle.load(pickle_in)
 pickle_in.close()
 

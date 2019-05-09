@@ -13,99 +13,117 @@ from scipy import special
 warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
-#from featureDef import featureFile
 from bandSim import bandCand
-from noiseGen import generation, funcGenerator
-
-
-# Creates dataframe for file
-def DF(path):
-    axislabels = ["DM", "Time", "S/N", "Width"]
-    Tfile = open(path,'r')
-    data = np.fromfile(Tfile,np.float32,-1) 
-    c = data.reshape((-1,4))
-    df = pd.DataFrame(c,columns=axislabels)
-    Tfile.close()
-    return df
+from noiseGen import generation
 
 def progressBar(value, endvalue, bar_length=20):
+    """Displays and updates a progress bar in the console window.
+
+    Keyword arguments:
+    value -- current iteration value
+    endvalue -- value at which the iterations end
+    bar_length -- length of progress bar in console window
+    """
     
-    percent = float(value) / endvalue
-    arrow = '-' * int(round(percent * bar_length) - 1) + '>'
+    percent = float(value) / endvalue       # Calculates progress percentage
+    arrow = '-' * int(round(percent * bar_length) - 1) + '>'    # Draws arrow displayed
     spaces = ' ' * (bar_length - len(arrow))
     
+    # Writes/updates progress bar
     sys.stdout.write("\rPercent: [{0}] {1}%".format(arrow + spaces, int(round(percent * 100))))
 
-# Method to calculate and return the theoretical DM range span given a certain
-# time duration/width and peak magnitude
-def cordes(Wms,SNratio):
-    freq = 0.334
-    bandWidth = 64
 
-    x = np.linspace(-1000,1000,10000)   # Generates x-values for the cordes function
+def cordes(Wms,SNratio):
+    """Calculate the dm range spanned by band at value given by SNratio
+
+    Keyword arguments:
+    Wms -- the width (ms) property of signal under consideration
+    SNratio -- the ratio of SN w.r.t. peak. Value at which the dm range is calculated.
+    """
+    freq = 0.334    # Centre frequency of survey
+    bandWidth = 64  # Bandwidth of survey
+
+    x = np.linspace(-1000,1000,10000)                           # Generates x-values for the cordes function
     zeta = (6.91*10**-3)*bandWidth*(freq**-3)*(Wms**-1)*x       # Zeta function in the cordes function 
-    y = (math.pi**(1/2))*0.5*(zeta**-1)*special.erf(zeta)
+    y = (math.pi**(1/2))*0.5*(zeta**-1)*special.erf(zeta)       # Values of cordes function, ranges between 0 and 1
     
-    dm = x[np.nonzero(y > SNratio)]
-    dm_range = dm[-1] - dm[0]      # Theoretical allowed DM range for the current candidate
+    dm = x[np.nonzero(y > SNratio)]         # Array containing all dm values corresponding to y-values > SNratio
+    dm_range = dm[-1] - dm[0]               # Theoretical allowed DM range for the current candidate
     
     return dm_range
 
-# Finds the closest value to a myNumber in sorted myList 
+def takeClosestNum(myList, myNumber):
+    """Finds the closest value to numbers from a list defined by myList
+
+    Keyword arguments:
+    myList -- list of values that myNumber can be found close to
+    myNumber -- values under consideration
+    """
+    pos = bisect_left(myList, myNumber)     # Bisection search to return an index
+    if pos == 0:
+        return myList[0]    # Before range of list return first value
+    if pos == len(myList):
+        return myList[-1]   # Outside range return last value
+    before = myList[pos - 1]    # Value 1 index prior
+    after = myList[pos]     # Value 1 index later
+    if after - myNumber < myNumber - before:
+       return after
+    else:
+       return before
+ 
 def takeClosestArr(myList, myArr):
+    """Finds the closest value of values in myArr to numbers from a list defined 
+    by myList
+
+    Keyword arguments:
+    myList -- list of values that myArr can be found close to
+    myArr -- array with values under consideration
+    """
     tempArr = []
     for i in myArr:
         
-        pos = bisect_left(myList, i) #bisection search to return and index
+        pos = bisect_left(myList, i)    # Bisection search to return and index
         if pos == 0:
-            return myList[0]    #before range of list return first value
+            return myList[0]    # Before range of list return first value
         if pos == len(myList):
-            return myList[-1]   #outside range return last value
-        before = myList[pos - 1]    #valude 1 index prior
-        after = myList[pos]     #value 1 index later
+            return myList[-1]   # Outside range return last value
+        before = myList[pos - 1]    # Value 1 index prior
+        after = myList[pos]     # Value 1 index later
         if after - i < i - before:
            tempArr.append(after)
         else:
            tempArr.append(before)
            
     return tempArr
-
-# Finds the closest value to a myNumber in sorted myList 
-def takeClosestNum(myList, myNumber):
-    
-    pos = bisect_left(myList, myNumber) #bisection search to return and index
-    if pos == 0:
-        return myList[0]    #before range of list return first value
-    if pos == len(myList):
-        return myList[-1]   #outside range return last value
-    before = myList[pos - 1]    #valude 1 index prior
-    after = myList[pos]     #value 1 index later
-    if after - myNumber < myNumber - before:
-       return after
-    else:
-       return before
-
    
 def timeGen(timeArr, dmArr, snArr, sdev = 1.44806):
-    slope = np.random.normal(-1636.53, 553.15) 
-    peakInd = np.argmax(snArr)
-    peakDM = dmArr[peakInd]
-    peakTime = timeArr[peakInd]
+    """Applies a slope in time-DM space of clusters found empirically
+
+    Keyword arguments:
+    timeArr -- time data of cluster
+    dmArr -- DM data of cluster
+    snArr -- SN data of cluster
+    sdev -- Standard deviation in DM space of points around the slope 
+    """
+    slope = np.random.normal(-1636.53, 553.15)      # Slope of straight line in time-DM space, found empirically
+    peakInd = np.argmax(snArr)                      # Index of the cluster peak in DM-SN space
+    peakDM = dmArr[peakInd]                         # DM corresponding to SN peak
+    peakTime = timeArr[peakInd]                     # Time corresponding to SN peak
     
-    intercept = peakDM - slope*peakTime
+    intercept = peakDM - slope*peakTime             # Intercept of straight line
     
-    timeShift = ((np.random.normal(dmArr, sdev) - intercept)/slope) - peakTime
-    timeArr = timeArr + timeShift
+    timeShift = ((np.random.normal(dmArr, sdev) - intercept)/slope) - peakTime  # Amount that time is shifted by to create slope
+    timeArr = timeArr + timeShift   # New, shifted, time data
 
     return timeArr
 
-#make directory for files to be outputted an inputted if they don't exist
+# Make directory for files to be output and inputted if they don't exist
 try:
     os.mkdir(os.getcwd()+"\sim_data\\") #output folder
 except:
     pass
+
 try: ####If changed to inject into a file will need error hadnling for an empty idirt
-    
     os.mkdir(os.getcwd()+"\idir\\") #input folder 
 except:
     pass
@@ -158,7 +176,7 @@ noiseFraction = 0.15             # Fraction of noise events in a candidate
 bursts = []                     # All bursts are stored here, array of arrays
 counter = 0
 
-noiseFunctions = funcGenerator()
+#noiseFunctions = funcGenerator()
 
 
 source_paths = []   # Array of file paths to be reviewed
@@ -354,13 +372,12 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
     
     np.random.seed()
     numArr = [
-                np.random.randint(20,30),
-                np.random.randint(70,90),
-                np.random.randint(130,160),
-                np.random.randint(200,280),
-                np.random.randint(400,550)
-                ]
-    numPoints = np.random.choice(numArr, 1, p = [0.5,0.25,0.1,0.1,0.05])[0]     # Number of points in the burst
+            np.random.randint(20,30),
+            np.random.randint(70,90),
+            np.random.randint(200,280),
+            np.random.randint(450,700)
+            ]
+    numPoints = np.random.choice(numArr, 1, p = [0.45,0.15,0.15,0.25])[0]     # Number of points in the burst
     
     stDevSN = np.random.uniform(0.1,1)             # Standard deviation of the SN of the burst events
     stDevDM = np.random.uniform(0,4)   # Standard deviation of the DM of the burst events
@@ -392,7 +409,7 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
             wArr.append(32)
             labArr.append(0)
             
-        dataArr = generation(numPoints + 1, dmWidth, noiseFunctions)
+        dataArr = generation(numPoints + 1, dmWidth)
         snArr = dataArr[0]
         tempDM = dataArr[1] - dmWidth/2 + dmMid
 

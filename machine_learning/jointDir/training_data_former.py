@@ -8,11 +8,19 @@ import pickle
 import sys
 
 def progressBar(value, endvalue, bar_length=20):
+    """Displays and updates a progress bar in the console window.
+
+    Keyword arguments:
+    value -- current iteration value
+    endvalue -- value at which the iterations end
+    bar_length -- length of progress bar in console window
+    """
     
-    percent = float(value) / endvalue
-    arrow = '-' * int(round(percent * bar_length) - 1) + '>'
+    percent = float(value) / endvalue       # Calculates progress percentage
+    arrow = '-' * int(round(percent * bar_length) - 1) + '>'    # Draws arrow displayed
     spaces = ' ' * (bar_length - len(arrow))
     
+    # Writes/updates progress bar
     sys.stdout.write("\rPercent: [{0}] {1}%".format(arrow + spaces, int(round(percent * 100))))
 
 CATEGORIES=["Noise","Burst"]
@@ -68,7 +76,7 @@ def create_training_data(DATADIR):
     random.shuffle(label_data)
     
     return np.array(matrix_data), np.array(label_data)
-"""STARTED AT 13:22"""
+
 input_folder = import_prompt()
 output_folder = output_prompt()
 
@@ -79,10 +87,7 @@ y = data[1]
 
 X = X.reshape(-1, 100, 100, 1)
 
-#prit(np.mean(X))
-
-
-
+"""
 meanNonz = np.mean(X[np.nonzero(X)])
 sDevNonz = np.std(X[np.nonzero(X)])
 
@@ -98,21 +103,21 @@ sDev = np.std(X[np.nonzero(X)])
 
 Xscaled = (X-mean)/sDev
 
-scaling = [meanNonz, sDevNonz]
+scaling = [mean, sDev]
 scaling = np.array(scaling)
 
 
-Xorig = X
+Xorig = X"""
 
-Xavg = X/np.mean(X)
+Xavg = X/np.mean(X[np.nonzero(X)])
 
 
-
+print(np.mean(np.mean(X[np.nonzero(X)])))
 
 
 #download more ram or batch it 
 #Xmean = X/np.mean(X)
-
+"""
 pickle_out = open("formed_data\\" + output_folder + "\\X_scaledNonz.pickle","wb")
 pickle.dump(Xnonz,pickle_out, protocol=4)
 pickle_out.close()
@@ -128,12 +133,12 @@ pickle_out = open("formed_data\\" + output_folder + "\\X_scaled.pickle","wb")
 pickle.dump(Xscaled,pickle_out, protocol=4)
 pickle_out.close()
 
-pickle_out = open("formed_data\\" + output_folder + "\\scale_paramNonz.pickle","wb")
-pickle.dump(nonzScaling,pickle_out)
+pickle_out = open("formed_data\\" + output_folder + "\\scale_param.pickle","wb")
+pickle.dump(scaling,pickle_out)
 pickle_out.close()
 
 
-
+"""
 pickle_out = open("formed_data\\" + output_folder + "\\Xavg.pickle","wb")
 pickle.dump(Xavg,pickle_out, protocol=4)
 pickle_out.close()
@@ -141,10 +146,10 @@ pickle_out.close()
 
 
 
-
+"""
 pickle_out = open("formed_data\\" + output_folder + "\\Xorig.pickle","wb")
 pickle.dump(Xorig,pickle_out, protocol=4)
-pickle_out.close()
+pickle_out.close()"""
 
 pickle_out = open("formed_data\\" + output_folder + "\\y2.pickle","wb")
 pickle.dump(y, pickle_out, protocol=4)

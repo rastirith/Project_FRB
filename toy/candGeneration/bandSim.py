@@ -33,39 +33,35 @@ def bandCand():
     
     peakSN = 0          # SN value of the peak
     while peakSN < 20:  # Peak SN is always higher than 20
-        peakSN = (np.random.gumbel(1, 1)**0.85)*55
+        peakSN = (np.absolute(np.random.gumbel(1, 1.2))**0.65)*65
         
-    tempArr = [1.0]     # Cordes function values corresponding to the SN values of "bands", peak SN has value 1.0.
-    tempWarr = [np.random.uniform(0.05,0.3)]    # Widths of the "bands", peak has small width (0.05ms to 0.3ms)
+    tempArr = np.full((1), 1.0)    # Cordes function values corresponding to the SN values of "bands", peak SN has value 1.0.
+    tempWarr = np.full((1), np.random.uniform(0.05,0.3))      # Widths of the "bands", peak has small width (0.05ms to 0.3ms)
     
     n = int((1 + peakSN/50) + (np.random.normal(0, 1)**2)**0.5)     # Number of bands, derived empirically from Crab data
     band = np.random.normal(5/12, 1/18)                             # Cordes value of band
-    tempArr.append(band)
+    tempArr = np.append(tempArr, band)
     
     for l in range(n - 1):                      # Creates remaining bands underneath the second
         band *= np.random.normal(2/3, 1/6)
-        tempArr.append(band)
+        tempArr = np.append(tempArr, band)
         
-    tempArr = np.array(tempArr)
     tempArr[::-1].sort()            # Sorts the array in descending order
     tempArr *= peakSN               # Assigns actual SN values 
     
     for k in range(len(tempArr) - 1):   # Assigns width data for all bands
         factor = np.random.normal(0.460, 0.066)                     # Exponential decay factor, dervied empirically from Crab data
         w = ((tempArr[k + 1]/tempArr[k])**(-1/factor))*tempWarr[k]  # Uses ratios of SN to calculate corresponding width data
-        tempWarr.append(w)
-    
-    tempArr = np.array(tempArr)
-    tempWarr = np.array(tempWarr)
+        tempWarr = np.append(tempWarr, w)
     
     tempArr = tempArr[np.nonzero(tempWarr < 40)]        # Bands considered should have width less than 40
     tempWarr = tempWarr[np.nonzero(tempWarr < 40)]
     
     if len(tempArr) == 1:       # Exception case where all bands but the peak has been sorted away
-        np.append(tempArr, np.random.uniform(10,12))        # Creates bottom band of low DM (10 to 12)
+        tempArr = np.append(tempArr, np.random.uniform(10,12))        # Creates bottom band of low DM (10 to 12)
         factor = np.random.normal(0.460, 0.066)             
         w = ((tempArr[-1]/tempArr[0])**(-1/factor))*tempWarr[0]
-        np.append(tempWarr, w)
+        tempWarr = np.append(tempWarr, w)
      
     cordAlt = cordes(tempWarr[-1])      # Calculates DM range spanned by bottom band, used to guide tail points data range
     
@@ -79,66 +75,73 @@ def bandCand():
         bandSNs = np.random.normal(tempArr[k], 0.3, len(bandDMs))   # All SN data in the band
         bandWs = np.random.normal(tempWarr[k], 0.01, len(bandDMs))  # All width data in the band
 
-        if k == 1:
-            np.append(bandDMs, 0)
-            np.append(bandSNs, tempArr[0])
+        if k == 1:                  # Adds the peak points data to the first array (just to include it)
+            bandDMs = np.append(bandDMs, 0)
+            bandSNs = np.append(bandSNs, tempArr[0])
+            bandWs = np.append(bandWs, tempWarr[0])
         
-        tWidth = 0.4 + (np.log2(tempWarr[k])/10)
+        tWidth = 0.4 + (np.log2(tempWarr[k])/10)        # Width (ms) of tail parts, as derived from Crab data: 
+                                                        # Tails seem to follow the cordes function peaking at peakSN
+                                                        # increasing with 0.1 ms for every factor of 2 increase in the 
+                                                        # actual width data (2ms -> 0.5, 4ms -> 0.6, 8ms -> 0.7)
         
-        xTail = np.linspace(-cordAlt-5, cordAlt+5, 1*numDMpoints)
-        zeta = (6.91*10**-3)*336*(1.732**-3)*(tWidth**-1)*xTail      # Zeta function in the cordes function
-        zeta[zeta == 0] = 0.000001
+        xTail = np.linspace(-cordAlt-5, cordAlt+5, 1*numDMpoints)   # Tail dm data
+        zeta = (6.91*10**-3)*336*(1.732**-3)*(tWidth**-1)*xTail     # Zeta function in the cordes function
+        zeta[zeta == 0] = 0.000001                                  # Fixes zeta = 0 issue
             
-        yDeviations = np.random.normal(0,0.02, len(zeta))
-        yTail = (math.pi**(1/2))*0.5*(zeta**-1)*special.erf(zeta) + yDeviations
-        wTail = np.random.normal(tempWarr[k], 0.01, len(zeta))
+        yDeviations = np.random.normal(0,0.02, len(zeta))           # Deviation in SN data (to add randomness)
+        yTail = (math.pi**(1/2))*0.5*(zeta**-1)*special.erf(zeta) + yDeviations     # Final cordes value for tail's SN
+        wTail = np.random.normal(tempWarr[k], 0.01, len(zeta))                      # Final width data for tails
 
-    
         yTail = np.array(yTail)
         wTail = np.array(wTail)
         
-        capRatio = np.random.uniform(tempArr[-1]/tempArr[0] + 0.08, 0.24)
+        capRatio = np.random.uniform(tempArr[-1]/tempArr[0] + 0.08, 0.24)   # Upper cap of SN ratios
         
-        xTail = xTail[np.nonzero(yTail < capRatio)]
+        xTail = xTail[np.nonzero(yTail < capRatio)]     # Removes all data below the above defined upper cap
         wTail = wTail[np.nonzero(yTail < capRatio)]
         yTail = yTail[yTail < capRatio]
         
-        yTail *= tempArr[0]
+        yTail *= tempArr[0]     # Multiplies with peakSN, i.e. turns cordes ratios into absolute SN values
         
-        xTail = xTail[np.nonzero(yTail > tempArr[-1])]
+        xTail = xTail[np.nonzero(yTail > tempArr[-1])]      # Only keeps tail data above the bottom band
         wTail = wTail[np.nonzero(yTail > tempArr[-1])]
         yTail = yTail[yTail > tempArr[-1]]
         
-        xTailVert = []
-        yTailVert = []
-        wTailVert = []
+        # Under the tails there are further points vertically under the tail points
+        xTailVert = np.array([])
+        yTailVert = np.array([])
+        wTailVert = np.array([])
         
-        for i in range(len(yTail)):
-            randVar = np.random.uniform(0,1)
-            if randVar > (i/(2.5*len(yTail))) + 0.2 - k*0.1:
-                num = np.random.randint(0, 5)
-                temp = np.random.uniform(tempArr[-1], yTail[i], num)
+        for i in range(len(yTail)):     # Goes through all tail points to create points vertically underneath them
+            randVar = np.random.uniform(0,1)    # Random variable between 0 and 1
+            if randVar > (i/(2.5*len(yTail))) + 0.2 - k*0.1:    # Defines a probability to create more points under the tail point
+                num = np.random.randint(0, 5)       # Number of vertical tail points
+                temp = np.random.uniform(tempArr[-1], yTail[i], num)    # SN values of vertical tail points
                 yTailVert = np.concatenate((yTailVert, temp))
                 xTailVert = np.concatenate((xTailVert, [xTail[i]]*num))
                 wTailVert = np.concatenate((wTailVert, np.random.normal(tempWarr[k], 0.01, num)))
         
-        if len(yTailVert) > 0:
+        if len(yTailVert) > 0:  # Only keeps vertical tail points that are above 2 SN less than the bottom band
             xTailVert = xTailVert[np.nonzero(yTailVert > (tempArr[-1] - 2))]
             wTailVert = wTailVert[np.nonzero(yTailVert > (tempArr[-1] - 2))]
             yTailVert = yTailVert[yTailVert > (tempArr[-1] - 2)]
             
+        # Final data arrays
         finalSNarr = np.concatenate((finalSNarr, yTailVert, yTail, bandSNs))
         finalDMarr = np.concatenate((finalDMarr, xTailVert, xTail, bandDMs))
         finalWarr = np.concatenate((finalWarr, wTailVert, wTail, bandWs))
     
-    addRight = np.random.randint(1,4)
+    addRight = np.random.randint(1,4)   # Number of additional tails
     for q in range(addRight):
+        """ Adds additional tails that does not necessarily correspond to the bands seen """
         
-        step = np.random.uniform(0.05, 0.15)
-        tWidth += step
+        step = np.random.uniform(0.05, 0.15)    # Width step
+        tWidth += step  # Increases width accordingly
         
+        """ Rest of this for loop is same as the commented for loop above"""
         xTail = np.linspace(-cordAlt-5, cordAlt+5, 1*numDMpoints)
-        zeta = (6.91*10**-3)*336*(1.732**-3)*(tWidth**-1)*xTail      # Zeta function in the cordes function
+        zeta = (6.91*10**-3)*336*(1.732**-3)*(tWidth**-1)*xTail
         zeta[zeta == 0] = 0.000001
         
         yDeviations = np.random.normal(0,0.02, len(zeta))
@@ -157,9 +160,9 @@ def bandCand():
         wTail = wTail[np.nonzero(yTail > tempArr[-1])]
         yTail = yTail[yTail > tempArr[-1]]
         
-        xTailVert = []
-        yTailVert = []
-        wTailVert = []
+        xTailVert = np.array([])
+        yTailVert = np.array([])
+        wTailVert = np.array([])
         
         for i in range(len(yTail)):
             randVar = np.random.uniform(0,1)
@@ -179,16 +182,17 @@ def bandCand():
         finalSNarr = np.concatenate((finalSNarr, yTailVert, yTail))
         finalDMarr = np.concatenate((finalDMarr, xTailVert, xTail))
         finalWarr = np.concatenate((finalWarr, wTailVert, wTail))
-            
-    noiseFraction = 1/4
     
-    noiseNum = int((noiseFraction*len(finalDMarr))/(1 - noiseFraction))
-    noiseDM = np.random.uniform(np.amin(finalDMarr), np.amax(finalDMarr), noiseNum)
-    noiseSN = np.random.normal(8, np.amax([2, np.amax(finalSNarr)/20]), len(noiseDM))
+    """ Adds random noise to the final plots """
+    noiseFraction = 1/4 # Fraction of points that is noise
     
-    noiseDM = noiseDM[np.nonzero(noiseSN > 8)]
+    noiseNum = int((noiseFraction*len(finalDMarr))/(1 - noiseFraction))     # Number of noise points
+    noiseDM = np.random.uniform(np.amin(finalDMarr), np.amax(finalDMarr), noiseNum)     # DM noise data
+    noiseSN = np.random.normal(np.amin(finalSNarr), np.amax([2, np.amax(finalSNarr)/20]), len(noiseDM))   # SN noise data
+    
+    noiseDM = noiseDM[np.nonzero(noiseSN > 8)]  # Requires noise to be above 8 SN
     noiseSN = noiseSN[noiseSN > 8]
-    noiseW = np.full((len(noiseDM)), 32)
+    noiseW = np.full((len(noiseDM)), 32)        # Typical noise width value
     
     finalSNarr = np.concatenate((finalSNarr, noiseSN))
     finalDMarr = np.concatenate((finalDMarr, noiseDM))
