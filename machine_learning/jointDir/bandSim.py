@@ -192,7 +192,8 @@ def bandCand():
     
     noiseDM = noiseDM[np.nonzero(noiseSN > 8)]  # Requires noise to be above 8 SN
     noiseSN = noiseSN[noiseSN > 8]
-    noiseW = np.full((len(noiseDM)), 32)        # Typical noise width value
+    noiseW = np.random.normal(30,1.8, len(noiseDM))
+    #noiseW = np.full((len(noiseDM)), 32)        # Typical noise width value
     
     finalSNarr = np.concatenate((finalSNarr, noiseSN))
     finalDMarr = np.concatenate((finalDMarr, noiseDM))

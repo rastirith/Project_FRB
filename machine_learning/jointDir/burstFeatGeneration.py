@@ -296,7 +296,7 @@ while counter < numBursts:
                 timeVar = (timeMid + np.random.uniform(-timeRange,timeRange)/1000)    # Time of detection of the points
                     
                 tArr.append(timeVar)    # Adds the time to the time array that has been "pixelated" to match the p-band data
-                wArr.append(32)
+                wArr.append(np.random.normal(30,1.8))
                 labArr.append(1)
             
                 if tempVar1 <= noiseFraction*fraction:  # Generates the the noise points
@@ -308,7 +308,7 @@ while counter < numBursts:
                     dmArr.append(takeClosestNum(DM_poss, noiseDM))
                     snArr.append(noiseSN)
                     tArr.append(noiseTime)
-                    wArr.append(32)
+                    wArr.append(np.random.normal(30,1.8))
                     labArr.append(0)
                     
     tArr = timeGen(tArr, dmArr, snArr)
@@ -406,7 +406,7 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
             
             timeVar = 0.000256*round((timeMid + np.random.uniform(-timeRange,timeRange)/1000)/0.000256)     # Time of detection of the points
             tArr.append(round(timeVar,6))    # Adds the time to the time array that has been "pixelated" to match the p-band data
-            wArr.append(32)
+            wArr.append(np.random.normal(30,1.8))
             labArr.append(0)
             
         dataArr = generation(numPoints + 1, dmWidth)
