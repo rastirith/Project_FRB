@@ -6,27 +6,39 @@ import sys
 from timeit import default_timer as timer
 from matplotlib import pyplot as plt
 
+
 np.set_printoptions(linewidth = 100)
 
-###NEED TO HANDLE SEPERATE CLUSTERS SO ADD COLUMN TO DATA FILES WITH LABEL
-###see sourcepaths[16]&8
 def progressBar(value, endvalue, bar_length=20):
+    """Displays and updates a progress bar in the console window.
+
+    Keyword arguments:
+    value -- current iteration value
+    endvalue -- value at which the iterations end
+    bar_length -- length of progress bar in console window
+    """
     
-    percent = float(value) / endvalue
-    arrow = '-' * int(round(percent * bar_length) - 1) + '>'
+    percent = float(value) / endvalue       # Calculates progress percentage
+    arrow = '-' * int(round(percent * bar_length) - 1) + '>'    # Draws arrow displayed
     spaces = ' ' * (bar_length - len(arrow))
     
+    # Writes/updates progress bar
     sys.stdout.write("\rPercent: [{0}] {1}%".format(arrow + spaces, int(round(percent * 100))))
 
-
-# Creates dataframe for file
 def DF(path):
-    axislabels = ["DM", "Time", "S/N", "Width","Label"]
-    Tfile = open(path,'r')
-    data = np.fromfile(Tfile,np.float32,-1) 
-    c = data.reshape((-1,5))
-    df = pd.DataFrame(c,columns=axislabels)
+    """Opens binary encoded file, reshapes it into columns and returns a pandas datafram.
+
+    Keyword arguments:
+    path -- the path to the file to be opened
+    """
+    axislabels = ["DM", "Time", "S/N", "Width","Label"]     # Labels of data types contained in file
+    
+    Tfile = open(path,'r')  
+    data = np.fromfile(Tfile,np.float32,-1)         # Decodes data to float32 objects
+    c = data.reshape((-1,5))                        # Reshapes the string of numbers into columns
+    df = pd.DataFrame(c,columns=axislabels)         # Creates dataframe
     Tfile.close()
+    
     return df
 
 def indexing(arr1, arr2):
@@ -40,6 +52,33 @@ def indexing(arr1, arr2):
     
     result = np.ma.array(yindex, mask=mask)
     return result
+
+def import_prompt():
+    import_name = input("Name of folder to import from: ")
+    while import_name == "":
+        import_name = input("Please enter the name of the folder to import from: ")
+    exists = os.path.exists(os.getcwd() + '\\sim_data\\' + import_name)
+    while exists == False:
+        print("Folder does not exist, try again.")
+        import_name = input("Name of folder to import from: ")
+        exists = os.path.exists(os.getcwd() + '\\sim_data\\' + import_name)
+    import_name = os.getcwd() + '\\sim_data\\' + import_name
+    
+    return import_name
+        
+def output_prompt():
+    output_folder = input("Name of folder to be created: ")
+    while output_folder == "":
+        output_folder = input("Please enter a name for the folder to be created: ")
+    while True:
+        try:    # Only creates folders if they don't already exist
+            os.mkdir(os.getcwd() + '\\matrix_files\\' + output_folder)
+            break
+        except:
+            print("A folder with this name already exists. Please enter a different name.")
+            output_folder = input("Name of folder to be created: ")
+     
+    return output_folder
 
 #Import data
 #array of file locations and chosing the file to inspect with path
@@ -61,26 +100,17 @@ while exists == False:
     exists = os.path.exists(os.getcwd() + '\\matrix_files\\' + import_name)"""
 #os.path.exists(path_in_here) 
 
+input_folder = import_prompt()
 #filling source_paths from the idir
-for file in glob.glob(os.getcwd() + f"\{Folder}\\*\\"+ "*.dat"):
-    #print(file)
+for file in glob.glob(input_folder + "\\*\\*.dat"):
     source_paths.append(file)
 
-folderName = input("Name of folder to be created: ")
-while folderName == "":
-    folderName = input("Please enter a name for the folder to be created: ")
-while True:
-    print(os.getcwd() + '\\matrix_files\\' + folderName)
-    try:    # Only creates folders if they don't already exist
-        os.mkdir(os.getcwd() + '\\matrix_files\\' + folderName)
-        break
-    except:
-        print("A folder with this name already exists. Please enter a different name.")
-        folderName = input("Name of folder to be created: ")
+
+output_folder = output_prompt()
     
 # Make directory for matrix files to go to
-os.mkdir(os.getcwd()+"\\matrix_files\\" + folderName + "\\Burst\\")
-os.mkdir(os.getcwd()+"\\matrix_files\\" + folderName + "\\Noise\\")
+os.mkdir(os.getcwd()+"\\matrix_files\\" + output_folder + "\\Burst\\")
+os.mkdir(os.getcwd()+"\\matrix_files\\" + output_folder + "\\Noise\\")
 
 
 #import dedispersion plan
@@ -120,8 +150,7 @@ pad7 = []
 
 #y = 20000
 n_s = [] ###testing dm dimensions
-for x in range(len(source_paths)):
-    break    
+for x in range(len(source_paths)):  
     #for x in range(y):
 
     #reading in data files    
@@ -274,14 +303,13 @@ for x in range(len(source_paths)):
         c_id = str(0) #Case of label array containing only 0 i.e generated noise
         
     n_s.append((len(zero3[:,:]),len(zero3[0,:]))) ###testing
-    new_name = source_paths[x].split(f"{Folder}\\")[1].split("\\")[1].replace(".dat","_m_"+c_id)
-    #np.savetxt(os.getcwd()+"\matrix_files\\Final\\"+new_name, zero3)
+    new_name = source_paths[x].split("\\")[-1].replace(".dat", "_m_" + c_id )
     
     #temporary for playground
     if c_id == "0":
-        np.save(os.getcwd()+"\matrix_files\\val_test\\Noise\\"+new_name, zero3)
+        np.save(os.getcwd()+"\\matrix_files\\" + output_folder + "\\Noise\\" + new_name, zero3)
     else:
-        np.save(os.getcwd()+"\matrix_files\\val_test\\Burst\\"+new_name, zero3)
+        np.save(os.getcwd()+"\\matrix_files\\" + output_folder + "\\Burst\\"+ new_name, zero3)
     
     end5 = timer()
     timePerK.append((end5 - start5)*1000)

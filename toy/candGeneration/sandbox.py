@@ -3,6 +3,7 @@ import numpy as np
 import random
 import math
 from scipy import special
+import scipy.stats as stats
 
 def randFunc(x,sdev):
 
@@ -35,5 +36,37 @@ for i in range(10):
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ax.scatter(x, y, s = 4)"""
-    
-print(np.arange(0,5,1))
+
+"""
+snMean = 50
+snSdev = 45
+clip = 20
+a, b = (clip - snMean) / snSdev, (999 - snMean) / snSdev
+
+x = stats.truncnorm(a, b, loc = snMean, scale = snSdev)"""
+"""
+x = (np.absolute(np.random.gumbel(1, 1.2, 1000000))**0.65)*65
+#x = (np.random.gumbel(1, 1, 1000000)**0.85)*55
+x = x[x > 20]
+  
+fig = plt.figure()
+ax = fig.add_subplot(111)
+ax.hist(x, bins = 200)"""
+#ax.set_xlim(20)
+
+a = [1, 2, 3]
+print(np.mean(a))
+
+
+
+
+
+
+
+
+
+
+
+
+
+

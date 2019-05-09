@@ -198,12 +198,6 @@ def bandCand():
     finalDMarr = np.concatenate((finalDMarr, noiseDM))
     finalWarr = np.concatenate((finalWarr, noiseW))
     
-    """
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    ax.scatter(finalDMarr,finalSNarr, s = 4)
-    ax.set_title(np.amax(finalSNarr/30))"""
-    
     return finalDMarr, finalSNarr, finalWarr
 
 bandCand()

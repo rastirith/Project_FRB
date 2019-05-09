@@ -5,13 +5,18 @@ from sklearn import preprocessing
 from sklearn.cluster import DBSCAN
 from timeit import default_timer as timer
 
-# Creates dataframe for file
 def DF(path):
-    axislabels = ["DM", "Time", "S/N", "Width"]
-    Tfile = open(path,'r')
-    data = np.fromfile(Tfile,np.float32,-1) 
-    c = data.reshape((-1,4))
-    df = pd.DataFrame(c,columns=axislabels)
+    """Opens binary encoded file, reshapes it into columns and returns a pandas datafram.
+
+    Keyword arguments:
+    path -- the path to the file to be opened
+    """
+    axislabels = ["DM", "Time", "S/N", "Width"]     # Labels of data types contained in file
+    
+    Tfile = open(path,'r')  
+    data = np.fromfile(Tfile,np.float32,-1)         # Decodes data to float32 objects
+    c = data.reshape((-1,4))                        # Reshapes the string of numbers into columns
+    df = pd.DataFrame(c,columns=axislabels)         # Creates dataframe
     Tfile.close()
     
     return df

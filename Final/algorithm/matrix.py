@@ -50,18 +50,17 @@ def matrix_form(ClusterArr, ddFile):
     r_DMpixels = 100
     
     #Forming data arrays form the candidate
-    DM = ClusterArr[:,0].round(3)
+    DM = np.float64(ClusterArr[:,0]).round(3)
     TIME = ClusterArr[:,1]
     SN = ClusterArr[:,2]
    
     #DM range spanned by cluster
     dmRange = np.array([DM[0],DM[-1]])
-   
+
     #Array of all possible DM values from the dedespersion plan
     possDF = de_des_plan(ddFile)
     
-    
-    #Finding the numeber rows for first candidate matrix from DM range of cand
+    #Finding the number rows for first candidate matrix from DM range of cand
     botDMind = possDF.loc[possDF["DM"] == dmRange[0]].index.item()
     topDMind = possDF.loc[possDF["DM"] == dmRange[1]].index.item()
     rows = topDMind - botDMind
