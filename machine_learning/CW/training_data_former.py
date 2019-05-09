@@ -56,10 +56,11 @@ def create_training_data(DATADIR):
         path = os.path.join(DATADIR,category)
         class_num = CATEGORIES.index(category)
         for matrix in os.listdir(path):
-            break
+
             count += 1
             progressBar(1,len(os.listdir(path)))
             #if len(matrix_data)==2:
+
                 #break
             try:
                 matrix_data.append(np.load(os.path.join(path,matrix)))
@@ -83,8 +84,25 @@ data = create_training_data(input_folder)
 X = data[0]
 y = data[1]
 
-X = X.reshape(-1, 100, 100, 1)
 
+X = X.reshape(-1, 100, 100, 2) #last digit 1 for just SN, 2 for SN & width
+
+
+mean = np.mean(X)#[np.nonzero(X)])
+sDev = np.std(X)#[np.nonzero(X)])
+
+X = (X - mean)/sDev
+#X = X/np.mean(X)
+scaling = [mean, sDev]
+scaling = np.array(scaling)
+print(scaling)
+"""
+Scaler = NDStandardScaler()
+Scaling = Scaler.fit(X)
+X = Scaling.transform(X)
+
+print(Scaling)
+"""
 #download more ram or batch it 
 X = X/np.mean(X)
 #print(np.unique(X[0]))
@@ -97,4 +115,6 @@ pickle_out = open("formed_data\\" + output_folder + "\\y2.pickle","wb")
 pickle.dump(y, pickle_out, protocol=4)
 pickle_out.close()
 
-
+pickle_out = open("scale_param.pickle","wb")
+pickle.dump(scaling,pickle_out)
+pickle_out.close()
