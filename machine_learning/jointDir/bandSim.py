@@ -184,7 +184,7 @@ def bandCand():
         finalWarr = np.concatenate((finalWarr, wTailVert, wTail))
     
     """ Adds random noise to the final plots """
-    noiseFraction = 1/4 # Fraction of points that is noise
+    noiseFraction = 1/6 # Fraction of points that is noise
     
     noiseNum = int((noiseFraction*len(finalDMarr))/(1 - noiseFraction))     # Number of noise points
     noiseDM = np.random.uniform(np.amin(finalDMarr), np.amax(finalDMarr), noiseNum)     # DM noise data

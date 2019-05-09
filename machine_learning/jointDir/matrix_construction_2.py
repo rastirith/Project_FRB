@@ -1,4 +1,4 @@
-#Matix construction for CNN
+ #Matix construction for CNN
 import numpy as np
 import pandas as pd
 import glob, os

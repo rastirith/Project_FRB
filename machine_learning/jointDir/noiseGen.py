@@ -105,14 +105,14 @@ def generation(numPoints, upperDM):
     dists *= np.random.uniform(2, 32)   # Absolute peak SN values of data (to be shifted another 8)
     dists += 8                          # Shifted up 8 SN (corresponding to cutoff in real data)
     xVals *= upperDM                    # Absolute values of DM given
-    """
+    
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    ax.scatter(xVals, dists, s = 4)"""
+    ax.scatter(xVals, dists, s = 4)
 
     return dists, xVals 
 
-"""
+
 np.random.seed()
 numArr = [
             np.random.randint(20,30),
@@ -122,4 +122,4 @@ numArr = [
             ]
 numPoints = np.random.choice(numArr, 1, p = [0.45,0.15,0.15,0.25])[0]     # Number of points in the burst
 
-generation(numPoints, 40)"""
+generation(numPoints, 40)

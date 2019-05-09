@@ -14,7 +14,7 @@ warnings.filterwarnings("ignore", category=mpl.cbook.mplDeprecation)
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 from bandSim import bandCand
-from noiseGen import generation
+from noiseGenAlt import noiseGenerator
 
 def progressBar(value, endvalue, bar_length=20):
     """Displays and updates a progress bar in the console window.
@@ -319,14 +319,19 @@ while counter < numBursts:
     totArr[:,1] = np.array(np.transpose(tArr))
     totArr[:,2] = np.array(np.transpose(snArr))
     totArr[:,3] = np.array(np.transpose(wArr))
+    
     """
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(111)
-    ax1.scatter(totArr[:,1], totArr[:,0])
+    ax1.scatter(totArr[:,1], totArr[:,0], s = 4)
     
     fig2 = plt.figure()
     ax2 = fig2.add_subplot(111)
-    ax2.scatter(totArr[:,0], totArr[:,2])"""
+    ax2.scatter(totArr[:,0], totArr[:,2], s = 4)
+    
+    fig3 = plt.figure()
+    ax3 = fig3.add_subplot(111)
+    ax3.scatter(totArr[:,2], totArr[:,3], s = 4)"""
     
 
     if intention == "c":
@@ -402,18 +407,22 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
     
     if funcVar > 0:
         #dmArr = np.linspace(-dmWidth/2, dmWidth/2, numPoints + 1)
-        for i in range(numPoints + 1):
+        dataArr = noiseGenerator()
+        tempDM = dataArr[0]
+        snArr = dataArr[1]
+        dmArr = takeClosestArr(DM_poss, tempDM)
+        for i in range(len(snArr)):
             
             timeVar = 0.000256*round((timeMid + np.random.uniform(-timeRange,timeRange)/1000)/0.000256)     # Time of detection of the points
             tArr.append(round(timeVar,6))    # Adds the time to the time array that has been "pixelated" to match the p-band data
             wArr.append(np.random.normal(30,1.8))
             labArr.append(0)
             
-        dataArr = generation(numPoints + 1, dmWidth)
-        snArr = dataArr[0]
-        tempDM = dataArr[1] - dmWidth/2 + dmMid
+        #dataArr = noiseGenerator()
+        #snArr = dataArr[0]
+        #tempDM = dataArr[1] - dmWidth/2 + dmMid
 
-        dmArr = takeClosestArr(DM_poss, tempDM)
+        #dmArr = takeClosestArr(DM_poss, tempDM)
         
             
     tArr = timeGen(tArr, dmArr, snArr)
@@ -428,10 +437,10 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(111)
     ax1.scatter(totArr[:,1], totArr[:,0])
-    
+    """
     fig2 = plt.figure()
     ax2 = fig2.add_subplot(111)
-    ax2.scatter(totArr[:,0], totArr[:,2])"""
+    ax2.scatter(totArr[:,0], totArr[:,2], s = 4)
     
     if intention == "c":
         totArr.reshape(-1)
