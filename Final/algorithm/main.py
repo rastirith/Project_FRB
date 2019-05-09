@@ -6,7 +6,7 @@ import warnings
 import pickle
 
 from clustering import cluster
-from matrix import matrix_form
+from matrix_width import matrix_form
 from tensorflow.keras.models import load_model
 
 from timeit import default_timer as timer
@@ -33,8 +33,8 @@ ddplan = "\\utils\\dd_plan.txt" #Dedispersion Plan Filepath
 #modelName = "\\utils\\binary_dropout_40_3_conv_64_nodes_1_dense_128_nodes_1557317452" #osk meandiv CNN
 #modelName = "\\utils\\binary_dropout_40_3_conv_64_nodes_1_dense_128_nodes_1557322428" #no norm
 #modelName = "\\utils\\binary_dropout_40_3_conv_64_nodes_1_dense_128_nodes_1557322926" #full z-score (withzero)
-modelName = "\\utils\\binary_dropout_40_3_conv_64_nodes_1_dense_128_nodes_1557343773" # new noise with norm
-
+#modelName = "\\utils\\binary_dropout_40_3_conv_64_nodes_1_dense_128_nodes_1557343773" # new noise with norm
+modelName = "\\utils\\binary_dropout_40_3_conv_64_nodes_1_dense_128_nodes_1557402387" #with width
 #Loading the CNN classifier model
 classifier = load_model(os.getcwd() + modelName)
 
@@ -57,7 +57,7 @@ timer4 = []
 counter=0 #testing
 
 # Loops through the whole file space defined by 'source_paths'
-for i in range(len(source_paths)): 
+for i in range(10):#len(source_paths)): 
     
     start1 = timer()
     progressBar(i,len(source_paths))
@@ -88,7 +88,7 @@ for i in range(len(source_paths)):
         
         #formatting the candidate data so parsable by CNN
         matrix = matrix_form(cand,ddplan)
-        matrix = matrix.reshape(-1,100,100,1) #/0.71 #this mean value
+        matrix = matrix.reshape(-1,100,100,2) #/0.71 #this mean value
         
         matrix = (matrix - scaling[0])/scaling[1]
         #predicting with the CNN
