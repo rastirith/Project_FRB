@@ -85,9 +85,16 @@ data = create_training_data(input_folder)
 X = data[0]
 y = data[1]
 
+#IF SINGLE
 X = X.reshape(-1, 100, 100, 1)
 
-"""
+#IF TUPLE
+#X = X.reshape(-1, 100, 100, 2)
+
+# SN/WIDTH
+#X = X.reshape(-1,32,100,1)
+
+
 meanNonz = np.mean(X[np.nonzero(X)])
 sDevNonz = np.std(X[np.nonzero(X)])
 
@@ -98,8 +105,8 @@ nonzScaling = np.array(nonzScaling)
 
 
 
-mean = np.mean(X[np.nonzero(X)])
-sDev = np.std(X[np.nonzero(X)])
+mean = np.mean(X)
+sDev = np.std(X)
 
 Xscaled = (X-mean)/sDev
 
@@ -107,7 +114,7 @@ scaling = [mean, sDev]
 scaling = np.array(scaling)
 
 
-Xorig = X"""
+Xorig = X
 
 Xavg = X/np.mean(X[np.nonzero(X)])
 
@@ -117,7 +124,7 @@ print(np.mean(np.mean(X[np.nonzero(X)])))
 
 #download more ram or batch it 
 #Xmean = X/np.mean(X)
-"""
+
 pickle_out = open("formed_data\\" + output_folder + "\\X_scaledNonz.pickle","wb")
 pickle.dump(Xnonz,pickle_out, protocol=4)
 pickle_out.close()
@@ -138,7 +145,7 @@ pickle.dump(scaling,pickle_out)
 pickle_out.close()
 
 
-"""
+
 pickle_out = open("formed_data\\" + output_folder + "\\Xavg.pickle","wb")
 pickle.dump(Xavg,pickle_out, protocol=4)
 pickle_out.close()
@@ -146,10 +153,10 @@ pickle_out.close()
 
 
 
-"""
+
 pickle_out = open("formed_data\\" + output_folder + "\\Xorig.pickle","wb")
 pickle.dump(Xorig,pickle_out, protocol=4)
-pickle_out.close()"""
+pickle_out.close()
 
 pickle_out = open("formed_data\\" + output_folder + "\\y2.pickle","wb")
 pickle.dump(y, pickle_out, protocol=4)

@@ -16,6 +16,14 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 from bandSim import bandCand
 from noiseGenAlt import noiseGenerator
 
+def rescale(arr, newMin, newMax):
+
+    oldRange = (np.amax(arr) - np.amin(arr))  
+    newRange = (newMax - newMin)  
+    newValue = (((arr - np.amin(arr)) * newRange) / oldRange) + newMin
+
+    return newValue
+
 def progressBar(value, endvalue, bar_length=20):
     """Displays and updates a progress bar in the console window.
 
@@ -220,7 +228,6 @@ else:
 
 while counter < numBursts:
     progressBar(counter, numBursts)
-    counter += 1
     
     upperTime = 50
     
@@ -252,6 +259,8 @@ while counter < numBursts:
     start = -dmWidth/2          # Lower end of the DM range of the burst, currently centered around 0
     step = dmWidth/numPoints    # Size of each DM step when looping through the DM range
     count = 0                   # Countiong the number of events in the burst 
+    noiseProb = 1/5
+    noiseVar = np.random.uniform(0,1)
     
     candType = 0
     if candType == 0:
@@ -259,6 +268,14 @@ while counter < numBursts:
         dmData = candData[0]
         snArr = candData[1]
         wArr = candData[2]
+        if noiseVar <= noiseProb:
+            #print(len(wArr))
+            dataArr = noiseGenerator(0)
+            rescaledDM = rescale(dataArr[0], np.amin(dmData), np.amax(dmData))
+            
+            dmData = np.concatenate((dmData, rescaledDM))
+            snArr = np.concatenate((snArr, dataArr[1]))
+            wArr = np.concatenate((wArr, np.full((len(dataArr[0])), np.random.normal(30,1.8))))
         
         dmData += dmMid
         for i in range(len(dmData)):
@@ -310,7 +327,11 @@ while counter < numBursts:
                     tArr.append(noiseTime)
                     wArr.append(np.random.normal(30,1.8))
                     labArr.append(0)
-                    
+    
+    if len(np.unique(dmArr)) < 4:
+        continue
+    
+    counter += 1
     tArr = timeGen(tArr, dmArr, snArr)
         
     # Creates a numpy table of the burst, same format as the standard .dat files
@@ -323,12 +344,12 @@ while counter < numBursts:
     """
     fig1 = plt.figure()
     ax1 = fig1.add_subplot(111)
-    ax1.scatter(totArr[:,1], totArr[:,0], s = 4)
-    
+    ax1.scatter(totArr[:,1], totArr[:,0], s = 4)"""
+    """
     fig2 = plt.figure()
     ax2 = fig2.add_subplot(111)
-    ax2.scatter(totArr[:,0], totArr[:,2], s = 4)
-    
+    ax2.scatter(totArr[:,0], totArr[:,2], s = 4)"""
+    """
     fig3 = plt.figure()
     ax3 = fig3.add_subplot(111)
     ax3.scatter(totArr[:,2], totArr[:,3], s = 4)"""
@@ -350,7 +371,6 @@ print("\nGenerating non-candidates")
 # NOISE
 while (counter < numBursts) and ((intention == "t") or (intention == "c")):
     progressBar(counter, numBursts)
-    counter += 1
     
     upperTime = 50
     
@@ -407,10 +427,15 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
     
     if funcVar > 0:
         #dmArr = np.linspace(-dmWidth/2, dmWidth/2, numPoints + 1)
-        dataArr = noiseGenerator()
+        dataArr = noiseGenerator(1)
         tempDM = dataArr[0]
         snArr = dataArr[1]
         dmArr = takeClosestArr(DM_poss, tempDM)
+        try:
+            len(dmArr)
+        except:
+            continue
+        
         for i in range(len(snArr)):
             
             timeVar = 0.000256*round((timeMid + np.random.uniform(-timeRange,timeRange)/1000)/0.000256)     # Time of detection of the points
@@ -426,7 +451,7 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
         
             
     tArr = timeGen(tArr, dmArr, snArr)
-    
+    counter += 1
     # Creates a numpy table of the burst, same format as the standard .dat files
     totArr = np.zeros([len(dmArr), 5])
     totArr[:,0] = np.array(np.transpose(dmArr))
@@ -438,9 +463,10 @@ while (counter < numBursts) and ((intention == "t") or (intention == "c")):
     ax1 = fig1.add_subplot(111)
     ax1.scatter(totArr[:,1], totArr[:,0])
     """
+    """
     fig2 = plt.figure()
     ax2 = fig2.add_subplot(111)
-    ax2.scatter(totArr[:,0], totArr[:,2], s = 4)
+    ax2.scatter(totArr[:,0], totArr[:,2], s = 4)"""
     
     if intention == "c":
         totArr.reshape(-1)

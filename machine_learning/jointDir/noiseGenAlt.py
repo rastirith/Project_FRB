@@ -13,7 +13,7 @@ def rescale(arr, newMin, newMax):
 noiseFile = np.load("noiseBases.npy")
 noiseBases = noiseFile[np.arange(0, len(noiseFile), 1)]
 
-def noiseGenerator():
+def noiseGenerator(lineOn):
 
     np.random.seed()
     ind1 = np.random.randint(0, len(noiseBases))
@@ -95,7 +95,7 @@ def noiseGenerator():
         
         for i in range(2):
             lineVar = np.random.uniform(0,1)
-            if lineVar < lineProb:
+            if (lineVar < lineProb and lineOn == 1):
                 dmSpan = np.amax(x) - np.amin(x)
                 points = np.random.randint(80,200)
                 lineSN = np.random.uniform(np.amin(convolved), np.amax(convolved)*1.2)

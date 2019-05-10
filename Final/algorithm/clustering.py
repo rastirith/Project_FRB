@@ -4,6 +4,7 @@ import os
 from sklearn import preprocessing
 from sklearn.cluster import DBSCAN
 from timeit import default_timer as timer
+from matplotlib import pyplot as plt
 
 def DF(path):
     """Opens binary encoded file, reshapes it into columns and returns a pandas datafram.
@@ -11,11 +12,11 @@ def DF(path):
     Keyword arguments:
     path -- the path to the file to be opened
     """
-    axislabels = ["DM", "Time", "S/N", "Width"]     # Labels of data types contained in file
+    axislabels = ["DM", "Time", "S/N", "Width", "Label"]     # Labels of data types contained in file
     
     Tfile = open(path,'r')  
     data = np.fromfile(Tfile,np.float32,-1)         # Decodes data to float32 objects
-    c = data.reshape((-1,4))                        # Reshapes the string of numbers into columns
+    c = data.reshape((-1,5))                        # Reshapes the string of numbers into columns
     df = pd.DataFrame(c,columns=axislabels)         # Creates dataframe
     Tfile.close()
     
@@ -43,8 +44,10 @@ def clusterOrder(clusterArr):
         clusterArr = np.where(clusterArr == lab_arr[n], n - 1, clusterArr)
     return clusterArr
 
+#xeps = 0.012
+#xmin = 3
 
-xeps = 0.012
+xeps = 0.008
 xmin = 3
 
 
@@ -57,8 +60,10 @@ def cluster(path):
     #fileSize = os.path.getsize(path)/1024000
     df = DF(path) # Creates dataframe from the .dat file
     
-    X_db = np.array(df.drop(columns=['Width', 'S/N']))  # Drops width and S/N data for DBScan to run on the DM - Time space
+    X_db = np.array(df.drop(columns=['Width', 'S/N', 'Label']))  # Drops width and S/N data for DBScan to run on the DM - Time space
     X = np.array(df)
+    
+    #X_db = X_db[np.nonzero(X[:,3] < 30)]
     
     # Sorts the data points by DM
     points_db = X_db[X_db[:,0].argsort()]
@@ -68,10 +73,14 @@ def cluster(path):
     # Speeds up the DBScan runtime
     dm_lim = 0.03*max(points_db[:,0])
     points_new = np.array(points_db[points_db[:,0] > dm_lim])
-    
 
     X_scaled = scale(1077.4,50.32576).transform(points_new) # Rescales the data so that the x- and y-axes get ratio 1:1
     X_scaled[:,1] = 3*X_scaled[:,1]
+    """
+    circle1 = plt.Circle((0, 0), xeps, color='r')
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.scatter(X_scaled[:,1], X_scaled[:,0], s = 4, c = "r", alpha = 0.6)"""
     
     clusters = DBSCAN(eps=xeps, min_samples = xmin).fit_predict(X_scaled)   # Clustering algorithm, returns array with cluster labels for each point
     
@@ -99,7 +108,7 @@ def cluster(path):
     
     # Break
     dm_lim = 40         # Increased DM-limit to check for clusters with 'fraction' of their points below this limit
-    fraction = 0.05     # Size of the fraction of points allowed in below 'dm_lim'
+    fraction = 0.1    # Size of the fraction of points allowed in below 'dm_lim'
 
     # Condition that sets all clusters with 'fraction' of its points below dm_lim to also be classified as RFI
     labels = np.unique(newArr[:,-1])
