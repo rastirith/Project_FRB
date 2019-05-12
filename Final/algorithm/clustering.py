@@ -87,6 +87,8 @@ def cluster(path):
     # Re-inserts bottom points with labels -1 for RFI
     length = len(points) - len(clusters)
     clusters = np.insert(clusters,0,np.full(length,-1))
+    
+    clustCount = len(np.unique(clusters))
 
     # Adds column to the points arrays for cluster label
     newArr = np.column_stack((points, clusters[np.newaxis].T))
@@ -145,4 +147,4 @@ def cluster(path):
     timer7.append(end7 - start7)
     #print("Clustering in module: ", np.mean(timer7))
     
-    return newArr, labels
+    return newArr, labels, clustCount

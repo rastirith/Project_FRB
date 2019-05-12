@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib as mpl
 from matplotlib import pyplot as plt
+from matplotlib.patches import Patch
+import matplotlib.patches as patches
+from matplotlib.lines import Line2D
 import glob, os, sys
 import warnings
 import pickle
@@ -80,10 +83,13 @@ step1Miss=0
 step2Miss=0
 signal1=0
 signal2 = 0
+afterDB = 0
+
+cmap1 = plt.cm.get_cmap('brg')
 
 # Loops through the whole file space defined by 'source_paths'
 
-for i in range(len(source_paths)): 
+for i in range(9859, 9870): 
     
     progressBar(i,len(source_paths))
 
@@ -94,7 +100,22 @@ for i in range(len(source_paths)):
     
     newArr = clusterData[0]
     labels = clusterData[1]
+    afterDB += clusterData[2]
+    """
+    fig1 = plt.figure()
+    ax1 = fig1.add_subplot(111)
+    ax1.scatter(newArr[:,1], newArr[:,0], s = 4, color = cmap1(newArr[:,4]), alpha = 0.6, label = "Detected events")
+    ax1.set_xlabel("Times (s)")
+    ax1.set_ylabel("DM (pc " + r'$cm^-3$' + ")")
+    ax1.set_title("DM vs Time plot of candidate file")
+
+    ax1.legend()"""
+    print(np.unique(newArr[:,4]))
     
+    fig2 = plt.figure()
+    ax2 = fig2.add_subplot(211)
+    ax2.scatter(newArr[:,1], newArr[:,0], s = 1, c = newArr[:,5], cmap = "tab10", vmin = -1, alpha = 0.6)
+
     for q in range(1,len(labels)):
         label = labels[q]
         cand = newArr[newArr[:,-1] == label]
@@ -139,6 +160,7 @@ for i in range(len(source_paths)):
             predCount += 1
             if 1 in cand[:,4]:
                 correct +=1
+                newArr[:,-1] = np.where(newArr[:,-1] == label, 0, newArr[:,-1])
                 """
                 fig = plt.figure()
                 ax = fig.add_subplot(111)
@@ -150,6 +172,7 @@ for i in range(len(source_paths)):
                 ax.scatter(cand[:,1], cand[:,0], s = 4, c = "g", alpha = 0.6)
                 plt.show"""
             else:
+                newArr[:,-1] = np.where(newArr[:,-1] == label, -1, newArr[:,-1])
                 """
                 fig = plt.figure()
                 ax = fig.add_subplot(111)
@@ -170,6 +193,7 @@ for i in range(len(source_paths)):
             plt.show"""
             #break
         elif 1 in cand[:,4]:
+            newArr[:,-1] = np.where(newArr[:,-1] == label, -1, newArr[:,-1])
             """
             fig = plt.figure()
             ax = fig.add_subplot(111)
@@ -182,6 +206,7 @@ for i in range(len(source_paths)):
             plt.show"""
             step2Miss +=1    
         else:
+            newArr[:,-1] = np.where(newArr[:,-1] == label, -1, newArr[:,-1])
             RFIcount+=1
         """
         elif 1 in cand[:,4]:
@@ -189,6 +214,24 @@ for i in range(len(source_paths)):
         else:
             RFIcount+=1"""
         counter+=1 #testing 
+    #fig2 = plt.figure()
+    a = newArr[newArr[:,-1] == -1]
+    b = newArr[newArr[:,-1] == 0]
+    ax3 = fig2.add_subplot(212)
+    ax3.scatter(a[:,1], a[:,0], s = 1, c = a[:,5], cmap = "brg", vmin = -1, alpha = 0.6, label = "RFI")
+    ax3.scatter(b[:,1], b[:,0], s = 1, c = b[:,5], cmap = "brg", vmin = -1, alpha = 0.6, label = "FRB")
+    ax3.set_xlabel("Time (s)")
+    fig2.text(0.04, 0.5, "DM (pc " + r'$cm^-3$' + ")", va='center', rotation='vertical')
+    
+    legend_elements = [Line2D(range(1), range(1), marker = 'o', markerfacecolor = cmap1(0), label='RFI')]
+    #legend_elements3 = [Line2D(range(1), range(1), marker = 'o', markerfacecolor = cmap1(10), label='FRB')]
+
+    ax2.legend(handles=legend_elements, loc=1, prop={'size': 8})
+    ax3.legend()
+    
+    #plt.ylabel("DM (pc " + r'$cm^-3$' + ")")
+    ax2.set_title("Candidate classification example")
+    plt.show()
     #break
 
 
@@ -202,7 +245,8 @@ print("\n clusters: ",counter,
       "\n correct: ",correct,
       "\n incorrect: ",incorrect,
       "\n step1Miss: ",step1Miss,
-      "\n step2Miss: ",step2Miss,)
+      "\n step2Miss: ",step2Miss,
+      "\n afterDB: ",afterDB,)
 
 
          
