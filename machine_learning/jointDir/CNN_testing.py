@@ -98,6 +98,6 @@ for dense_layer_size in dense_layer_sizes:
                               metrics=["accuracy"])
                 
 
-                model.fit(X, y, epochs=8, batch_size = 128, callbacks=[tensorboard, earlystop, modelcheckpoint], validation_split=0.15) ##validate here for tensorboard callback or use callback param in evaluate
+                model.fit(X, y, epochs=2, batch_size = 128, callbacks=[tensorboard, earlystop, modelcheckpoint], validation_split=0.15) ##validate here for tensorboard callback or use callback param in evaluate
 
              

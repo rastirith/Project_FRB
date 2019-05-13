@@ -348,7 +348,8 @@ while counter < numBursts:
     """
     fig2 = plt.figure()
     ax2 = fig2.add_subplot(111)
-    ax2.scatter(totArr[:,0], totArr[:,2], s = 4)"""
+    ax2.scatter(totArr[:,0], totArr[:,2], s = 4)
+    ax2.set_xlabel("burst_cand_" + str(counter) + ".dat")"""
     """
     fig3 = plt.figure()
     ax3 = fig3.add_subplot(111)

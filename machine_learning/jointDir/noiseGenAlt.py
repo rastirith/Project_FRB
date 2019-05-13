@@ -43,11 +43,11 @@ def noiseGenerator(lineOn):
     
     if convVar < convProb:
 
-        snNoiseArr = np.repeat(snNoiseArr, 4)
-        dmNoiseArr = np.repeat(dmNoiseArr, 4)
+        snNoiseArr = np.repeat(snNoiseArr, 3)
+        dmNoiseArr = np.repeat(dmNoiseArr, 3)
         
-        tempDM = np.linspace(0.001, 10, int(len(dmNoiseArr)/4))     # X-vals to evaluate the distributions over
-            
+        tempDM = np.linspace(0.001, 10, int(len(dmNoiseArr)/3))     # X-vals to evaluate the distributions over
+        """
         functions = np.array([      # Possible distributions that noise can follow
                     special.gammaln(tempDM), np.sqrt(tempDM), np.log(tempDM),
                     -special.gammaln(tempDM), -np.sqrt(tempDM), -np.log(tempDM),
@@ -55,8 +55,13 @@ def noiseGenerator(lineOn):
                     -special.erf(tempDM), -np.square(tempDM),
                     special.struve(0,tempDM), special.struve(1,tempDM), special.struve(2,tempDM),
                     tempDM, -tempDM, special.rgamma(tempDM), np.random.uniform(0, 5, len(tempDM))
-                    ])
+                    ])"""
     
+        functions = np.array([      # Possible distributions that noise can follow
+
+                        special.struve(0,tempDM), special.struve(1,tempDM), special.struve(2,tempDM),
+                        ])
+        
         ind2 = np.random.randint(0, len(functions))
         
         tempY = np.array(functions[ind2], copy = True)
@@ -93,6 +98,20 @@ def noiseGenerator(lineOn):
         snDev = np.random.uniform(8 - np.amin(convolved), 5)
         convolved += snDev
         
+        convolved = rescale(convolved, 0, 1)
+        x = rescale(x, 0, 1)
+        
+        fig2 = plt.figure()
+        ax2 = fig2.add_subplot(111)
+        ax2.scatter(dmNoiseArr, snNoiseArr, s = 4, c = "r", label = "Original data", alpha = 0.15)
+        ax2.scatter(x, convolved, s = 6, c = "k", label = "Final data")
+        ax2.plot(tempX, tempY_scaled, c = "b", label = "Conv. function", alpha = 0.3)
+        ax2.set_xlabel("DM (pc " + r'$cm^-3$' + ")")
+        ax2.set_ylabel("SN")
+        ax2.set_title("Simulated burst")
+        lgnd = plt.legend()
+        lgnd.legendHandles[0]._sizes = [20]
+        
         for i in range(2):
             lineVar = np.random.uniform(0,1)
             if (lineVar < lineProb and lineOn == 1):
@@ -114,7 +133,7 @@ def noiseGenerator(lineOn):
     
     np.random.seed()
     return dmNoiseArr, snNoiseArr
-
+noiseGenerator(0)
 """
 data = noiseGenerator()   
 dm = data[0]

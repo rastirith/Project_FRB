@@ -184,7 +184,7 @@ def bandCand():
         finalWarr = np.concatenate((finalWarr, wTailVert, wTail))
     
     """ Adds random noise to the final plots """
-    noiseFraction = np.random.uniform(0.2, 0.6) # Fraction of points that is noise
+    noiseFraction = np.random.uniform(0.2, 0.3) # Fraction of points that is noise
     
     noiseNum = int((noiseFraction*len(finalDMarr))/(1 - noiseFraction))     # Number of noise points
     noiseDM = np.random.uniform(np.amin(finalDMarr), np.amax(finalDMarr), noiseNum)     # DM noise data
@@ -198,6 +198,15 @@ def bandCand():
     finalSNarr = np.concatenate((finalSNarr, noiseSN))
     finalDMarr = np.concatenate((finalDMarr, noiseDM))
     finalWarr = np.concatenate((finalWarr, noiseW))
+    """
+    fig2 = plt.figure()
+    ax2 = fig2.add_subplot(111)
+    ax2.scatter(finalDMarr, finalSNarr, s = 4, label = "Detected events")
+    ax2.set_xlabel("DM (pc " + r'$cm^-3$' + ")")
+    ax2.set_ylabel("SN")
+    ax2.set_title("Simulated burst")
+    lgnd = plt.legend()
+    lgnd.legendHandles[0]._sizes = [20]"""
     
     lineProb = 1/10
     lineVar = np.random.uniform(0,1)
@@ -215,6 +224,8 @@ def bandCand():
         finalSNarr = np.concatenate((finalSNarr, lineSN))
         finalDMarr = np.concatenate((finalDMarr, lineDM))
         finalWarr = np.concatenate((finalWarr, lineW))
+    
+    
     
     return finalDMarr, finalSNarr, finalWarr
 
